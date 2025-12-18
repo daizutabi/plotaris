@@ -58,7 +58,7 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["ALL"]
 unfixable = ["F401"]
-ignore = ["ANN401", "D"]
+ignore = ["ANN401", "ARG001", "D", "PLR0913"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

@@ -11,13 +11,15 @@ from plotaris.marks.scatter import ScatterMark
 
 if TYPE_CHECKING:
     import polars as pl
+    from matplotlib.figure import Figure
+    from polars._typing import IntoExpr
 
     from plotaris.marks.base import Mark
 
 
 class Chart:
     data_handler: DataHandler
-    encodings: dict[str, str | pl.Expr]
+    encodings: dict[str, IntoExpr]
 
     def __init__(self, data: pl.DataFrame | pl.LazyFrame) -> None:
         self.data_handler = DataHandler(data)
@@ -40,10 +42,9 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    def show(self) -> None:
-        # Simplified rendering logic for now
+    def display(self) -> Figure:
         if self.mark is None:
-            msg = "Mark must be defined before showing the chart"
+            msg = "Mark must be defined before displaying the chart"
             raise ValueError(msg)
 
         # Resolve expressions (mock implementation)
@@ -53,6 +54,7 @@ class Chart:
         # In a real scenario, we need to handle pl.Expr by selecting/aliasing them
 
         df = self.data_handler.collect()
+        df.select()
 
         # Handle Expr in encodings (simplified: convert to string alias if possible, or raise)  # noqa: E501
         # This part requires more complex logic to actually modify the query
@@ -67,6 +69,9 @@ class Chart:
                 # Fallback or Todo
                 pass
 
-        _fig, ax = plt.subplots()  # pyright: ignore[reportUnknownMemberType]
+        fig, ax = plt.subplots()  # pyright: ignore[reportUnknownMemberType]
         self.mark.plot(ax, df, final_encodings)
-        plt.show()  # pyright: ignore[reportUnknownMemberType]
+        return fig
+
+    def _display_(self) -> Figure:
+        return self.display()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
-from plotaris.chart import Chart
+from .config import init
+from .core.chart import Chart
 
-__all__ = ["Chart"]
+__all__ = ["Chart", "init"]

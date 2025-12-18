@@ -1,5 +1,6 @@
 .coverage*
 .venv/
+__marimo__/
 __pycache__/
 dist/
 lcov.info
