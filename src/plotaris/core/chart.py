@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from dataclasses import replace
+from typing import TYPE_CHECKING, Any, Self
 
 import matplotlib.pyplot as plt
 
 from plotaris.core.data import DataHandler
-from plotaris.marks.bar import BarMark
+from plotaris.core.encoding import Encoding
 from plotaris.marks.line import LineMark
 from plotaris.marks.scatter import ScatterMark
 
@@ -19,27 +20,42 @@ if TYPE_CHECKING:
 
 class Chart:
     data_handler: DataHandler
-    encodings: dict[str, IntoExpr]
+    encoding: Encoding
+    mark: Mark | None
 
     def __init__(self, data: pl.DataFrame | pl.LazyFrame) -> None:
         self.data_handler = DataHandler(data)
-        self.encodings = {}
-        self.mark: Mark | None = None
+        self.encoding = Encoding()
+        self.mark = None
 
-    def encode(self, **kwargs: str | pl.Expr) -> Chart:
-        self.encodings.update(kwargs)
+    def encode(
+        self,
+        x: IntoExpr = None,
+        y: IntoExpr = None,
+        color: IntoExpr = None,
+        size: IntoExpr = None,
+        shape: IntoExpr = None,
+    ) -> Self:
+        """Map variables to visual properties, updating existing encodings."""
+        changes = {
+            "x": x,
+            "y": y,
+            "color": color,
+            "size": size,
+            "shape": shape,
+        }
+        changes = {k: v for k, v in changes.items() if v is not None}
+
+        self.encoding = replace(self.encoding, **changes)
+
         return self
 
-    def mark_scatter(self, **kwargs: Any) -> Chart:
+    def mark_scatter(self, **kwargs: Any) -> Self:
         self.mark = ScatterMark(**kwargs)
         return self
 
-    def mark_line(self, **kwargs: Any) -> Chart:
+    def mark_line(self, **kwargs: Any) -> Self:
         self.mark = LineMark(**kwargs)
-        return self
-
-    def mark_bar(self, **kwargs: Any) -> Chart:
-        self.mark = BarMark(**kwargs)
         return self
 
     def display(self) -> Figure:
@@ -47,30 +63,10 @@ class Chart:
             msg = "Mark must be defined before displaying the chart"
             raise ValueError(msg)
 
-        # Resolve expressions (mock implementation)
-        # Real implementation needs to evaluate expressions against the LazyFrame
-
-        # For now, let's just collect the data and assume encodings are column names
-        # In a real scenario, we need to handle pl.Expr by selecting/aliasing them
-
         df = self.data_handler.collect()
-        df.select()
-
-        # Handle Expr in encodings (simplified: convert to string alias if possible, or raise)  # noqa: E501
-        # This part requires more complex logic to actually modify the query
-        final_encodings: dict[str, str] = {}
-
-        # This is a placeholder. Real implementation should update self.data_handler's query  # noqa: E501
-        # to include the expressions and generate aliases.
-        for k, v in self.encodings.items():
-            if isinstance(v, str):
-                final_encodings[k] = v
-            else:
-                # Fallback or Todo
-                pass
-
         fig, ax = plt.subplots()  # pyright: ignore[reportUnknownMemberType]
-        self.mark.plot(ax, df, final_encodings)
+        self.mark.plot(ax, df, self.encoding)
+
         return fig
 
     def _display_(self) -> Figure:

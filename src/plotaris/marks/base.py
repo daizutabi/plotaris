@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     import polars as pl
     from matplotlib.axes import Axes
 
+    from plotaris.core.encoding import Encoding
+
 
 class Mark(ABC):
     kwargs: dict[str, Any]
@@ -15,5 +17,4 @@ class Mark(ABC):
         self.kwargs = kwargs
 
     @abstractmethod
-    def plot(self, ax: Axes, data: pl.DataFrame, encodings: dict[str, str]) -> None:
-        pass
+    def plot(self, ax: Axes, data: pl.DataFrame, encoding: Encoding) -> None: ...
