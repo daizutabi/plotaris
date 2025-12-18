@@ -1,15 +1,19 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import matplotlib.axes
     import polars as pl
+    from matplotlib.axes import Axes
+
 
 class Mark(ABC):
+    kwargs: dict[str, Any]
+
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
     @abstractmethod
-    def plot(self, ax: matplotlib.axes.Axes, data: pl.DataFrame, encodings: dict[str, str]) -> None:
+    def plot(self, ax: Axes, data: pl.DataFrame, encodings: dict[str, str]) -> None:
         pass

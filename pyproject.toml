@@ -28,6 +28,7 @@ Issues = "https://github.com/daizutabi/plotaris/issues"
 [dependency-groups]
 dev = [
   "basedpyright>=1.36.1",
+  "marimo>=0.18.4",
   "prek>=0.2.22",
   "pytest>=9.0.2",
   "pytest-clarity>=1.0.1",
@@ -57,7 +58,7 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["ALL"]
 unfixable = ["F401"]
-ignore = ["D"]
+ignore = ["ANN401", "D"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
