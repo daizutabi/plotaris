@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-def _to_list(columns: Iterable[str] | None) -> list[str]:
+def to_list(columns: Iterable[str] | None) -> list[str]:
     if columns is None:
         return []
     if isinstance(columns, str):
@@ -29,13 +29,13 @@ def group_by(data: pl.DataFrame, *by: str) -> tuple[pl.DataFrame, list[pl.DataFr
     return group, dfs
 
 
-def with_index(data: pl.DataFrame, names: list[str], name: str) -> pl.DataFrame:
-    if not names:
+def with_index(data: pl.DataFrame, columns: list[str], name: str) -> pl.DataFrame:
+    if not columns:
         return data.with_columns(pl.lit(0).alias(name))
 
     return data.join(
-        data.select(names).unique(maintain_order=True).with_row_index(name),
-        on=names,
+        data.select(columns).unique(maintain_order=True).with_row_index(name),
+        on=columns,
         maintain_order="left",
     )
 
@@ -58,8 +58,8 @@ class FacetFrame:
         col: Iterable[str] | None = None,
         wrap: int | None = None,
     ) -> None:
-        self.row = _to_list(row)
-        self.col = _to_list(col)
+        self.row = to_list(row)
+        self.col = to_list(col)
         self.group, self.data = group_by(data, *self.row, *self.col)
 
         self.group = with_index(self.group, self.row, ROW_INDEX)
