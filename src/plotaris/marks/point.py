@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from plotaris.core.encoding import Encoding
 
 
-class ScatterMark(Mark):
+class PointMark(Mark):
     @override
     def plot(self, ax: Axes, data: pl.DataFrame, encoding: Encoding) -> None:
         x, y = data.select(x=encoding.x, y=encoding.y)

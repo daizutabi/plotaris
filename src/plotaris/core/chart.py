@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from plotaris.core.data import DataHandler
 from plotaris.core.encoding import Encoding
 from plotaris.marks.line import LineMark
-from plotaris.marks.scatter import ScatterMark
+from plotaris.marks.point import PointMark
 
 if TYPE_CHECKING:
     import polars as pl
@@ -50,8 +50,8 @@ class Chart:
 
         return self
 
-    def mark_scatter(self, **kwargs: Any) -> Self:
-        self.mark = ScatterMark(**kwargs)
+    def mark_point(self, **kwargs: Any) -> Self:
+        self.mark = PointMark(**kwargs)
         return self
 
     def mark_line(self, **kwargs: Any) -> Self:
