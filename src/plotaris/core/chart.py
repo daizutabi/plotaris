@@ -61,9 +61,15 @@ class Chart:
 
         return self
 
-    def facet(self, *, row: str | None = None, col: str | None = None) -> Self:
+    def facet(
+        self,
+        *,
+        row: str | None = None,
+        col: str | None = None,
+        wrap: int | None = None,
+    ) -> Self:
         """Create a facet grid of subplots."""
-        self.grid = Facet(row=row, col=col)
+        self.grid = Facet(row=row, col=col, wrap=wrap)
         return self
 
     def mark_point(self, **kwargs: Any) -> Self:

@@ -11,19 +11,17 @@ ROW_INDEX = "_row_index"
 COL_INDEX = "_col_index"
 
 
-class FacetFrame:
+class FacetData:
     group: pl.DataFrame
     data: list[pl.DataFrame]
     row: list[str]
     col: list[str]
-    wrap: int | None
 
     def __init__(
         self,
         data: pl.DataFrame,
         row: Iterable[str] | None = None,
         col: Iterable[str] | None = None,
-        wrap: int | None = None,
     ) -> None:
         self.row = to_list(row)
         self.col = to_list(col)
@@ -31,8 +29,6 @@ class FacetFrame:
 
         self.group = with_index(self.group, self.row, ROW_INDEX)
         self.group = with_index(self.group, self.col, COL_INDEX)
-
-        self.wrap = wrap
 
     def __len__(self) -> int:
         return len(self.group)

@@ -4,7 +4,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from plotaris.core.data import FacetFrame, group_by
+from plotaris.core.data import FacetData, group_by
 
 
 @pytest.fixture(scope="module")
@@ -15,7 +15,7 @@ def data() -> pl.DataFrame:
 
 
 def test_facet_frame_row_col(data: pl.DataFrame) -> None:
-    result = FacetFrame(data, row="a", col="b")
+    result = FacetData(data, row="a", col="b")
 
     expected = pl.DataFrame(
         {
@@ -33,7 +33,7 @@ def test_facet_frame_row_col(data: pl.DataFrame) -> None:
 
 
 def test_facet_frame_row(data: pl.DataFrame) -> None:
-    result = FacetFrame(data, row="a")
+    result = FacetData(data, row="a")
 
     expected = pl.DataFrame(
         {
@@ -50,7 +50,7 @@ def test_facet_frame_row(data: pl.DataFrame) -> None:
 
 
 def test_facet_frame_col(data: pl.DataFrame) -> None:
-    result = FacetFrame(data, col="b")
+    result = FacetData(data, col="b")
 
     expected = pl.DataFrame(
         {
@@ -67,7 +67,7 @@ def test_facet_frame_col(data: pl.DataFrame) -> None:
 
 
 def test_facet_frame_row_list(data: pl.DataFrame) -> None:
-    result = FacetFrame(data, row=["a", "b"])
+    result = FacetData(data, row=["a", "b"])
 
     expected = pl.DataFrame(
         {
@@ -85,7 +85,7 @@ def test_facet_frame_row_list(data: pl.DataFrame) -> None:
 
 
 def test_facet_frame_no_facet(data: pl.DataFrame) -> None:
-    result = FacetFrame(data)
+    result = FacetData(data)
 
     expected = pl.DataFrame(
         {

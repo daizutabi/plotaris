@@ -16,3 +16,6 @@ class Grid:
 @dataclass(frozen=True)
 class Facet(Grid):
     """Declaratively specify how to facet plots."""
+
+    wrap: int | None = None
+    """The maximum number of columns before wrapping to a new row."""
