@@ -14,7 +14,7 @@ from .grid import Facet
 
 if TYPE_CHECKING:
     import polars as pl
-    from matplotlib.figure import Figure
+    from matplotlib.axes import Axes
 
     from plotaris.marks.base import Mark
 
@@ -84,7 +84,7 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    def display(self) -> Figure:
+    def display(self, ax: Axes | None = None) -> Axes:
         if self.mark is None:
             msg = "Mark must be defined before displaying the chart"
             raise ValueError(msg)
@@ -93,10 +93,12 @@ class Chart:
             raise NotImplementedError
 
         # Non-facet logic
-        fig, ax = plt.subplots()  # pyright: ignore[reportUnknownMemberType]
+        if ax is None:
+            ax = plt.gca()
+
         self.mark.plot(ax, self.data, self.encoding)
 
-        return fig
+        return ax
 
-    def _display_(self) -> Figure:
+    def _display_(self) -> Axes:
         return self.display()

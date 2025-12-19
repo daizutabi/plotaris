@@ -23,33 +23,7 @@ def _(pl):
 def _(data, plts):
     chart = plts.Chart(data).encode("x", "y").mark_line(marker="o", ms=2)
     chart
-    return (chart,)
-
-
-@app.cell
-def _(chart):
-    from dataclasses import fields, asdict
-
-    fields(chart.encoding)
     return
-
-
-@app.cell
-def _(data):
-    x, y = data.select(a="x", b="y")
-    return x, y
-
-
-@app.cell
-def _(plt, x, y):
-    plt.plot(x, y)
-    return
-
-
-@app.cell
-def _():
-    import matplotlib.pyplot as plt
-    return (plt,)
 
 
 @app.cell
