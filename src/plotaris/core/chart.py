@@ -5,18 +5,20 @@ from typing import TYPE_CHECKING, Any, Self
 
 import matplotlib.pyplot as plt
 
-from plotaris.core.encoding import Encoding
-from plotaris.core.grid import Facet
 from plotaris.marks.bar import BarMark
 from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
+
+from .encoding import Encoding
+from .grid import Facet
 
 if TYPE_CHECKING:
     import polars as pl
     from matplotlib.figure import Figure
 
-    from plotaris.core.grid import Grid
     from plotaris.marks.base import Mark
+
+    from .grid import Grid
 
 
 class Chart:

@@ -4,7 +4,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from plotaris.core.data import FacetFrame
+from plotaris.core.data import FacetFrame, group_by
 
 
 @pytest.fixture(scope="module")
@@ -82,3 +82,39 @@ def test_facet_frame_row_list(data: pl.DataFrame) -> None:
     assert len(ff) == 4
     assert ff.n_rows == 4
     assert ff.n_cols == 1
+
+
+def test_facet_frame_no_facet(data: pl.DataFrame) -> None:
+    ff = FacetFrame(data)
+
+    expected = pl.DataFrame(
+        {
+            "_row_index": [0],
+            "_col_index": [0],
+        },
+    )
+
+    assert_frame_equal(ff.group, expected, check_dtypes=False)
+    assert len(ff) == 1
+    assert ff.n_rows == 1
+    assert ff.n_cols == 1
+
+
+def test_group_by_no_by() -> None:
+    data = pl.DataFrame({"x": [1, 2, 3]})
+    group, dfs = group_by(data)
+    assert_frame_equal(group, pl.DataFrame([{}]))
+    assert len(dfs) == 1
+    assert_frame_equal(dfs[0], data)
+
+
+def test_group_by_empty() -> None:
+    group, dfs = group_by(pl.DataFrame(), "x")
+    assert_frame_equal(group, pl.DataFrame({"x": []}))
+    assert len(dfs) == 0
+
+
+def test_group_by_no_data() -> None:
+    group, dfs = group_by(pl.DataFrame({"x": []}), "x")
+    assert_frame_equal(group, pl.DataFrame({"x": []}))
+    assert len(dfs) == 0
