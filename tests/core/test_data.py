@@ -15,7 +15,7 @@ def data() -> pl.DataFrame:
 
 
 def test_facet_frame_row_col(data: pl.DataFrame) -> None:
-    ff = FacetFrame(data, row="a", col="b")
+    result = FacetFrame(data, row="a", col="b")
 
     expected = pl.DataFrame(
         {
@@ -26,14 +26,14 @@ def test_facet_frame_row_col(data: pl.DataFrame) -> None:
         },
     )
 
-    assert_frame_equal(ff.group, expected, check_dtypes=False)
-    assert len(ff) == 4
-    assert ff.n_rows == 2
-    assert ff.n_cols == 3
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert len(result) == 4
+    assert result.n_rows == 2
+    assert result.n_cols == 3
 
 
 def test_facet_frame_row(data: pl.DataFrame) -> None:
-    ff = FacetFrame(data, row="a")
+    result = FacetFrame(data, row="a")
 
     expected = pl.DataFrame(
         {
@@ -43,14 +43,14 @@ def test_facet_frame_row(data: pl.DataFrame) -> None:
         },
     )
 
-    assert_frame_equal(ff.group, expected, check_dtypes=False)
-    assert len(ff) == 2
-    assert ff.n_rows == 2
-    assert ff.n_cols == 1
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert len(result) == 2
+    assert result.n_rows == 2
+    assert result.n_cols == 1
 
 
 def test_facet_frame_col(data: pl.DataFrame) -> None:
-    ff = FacetFrame(data, col="b")
+    result = FacetFrame(data, col="b")
 
     expected = pl.DataFrame(
         {
@@ -60,14 +60,14 @@ def test_facet_frame_col(data: pl.DataFrame) -> None:
         },
     )
 
-    assert_frame_equal(ff.group, expected, check_dtypes=False)
-    assert len(ff) == 3
-    assert ff.n_rows == 1
-    assert ff.n_cols == 3
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert len(result) == 3
+    assert result.n_rows == 1
+    assert result.n_cols == 3
 
 
 def test_facet_frame_row_list(data: pl.DataFrame) -> None:
-    ff = FacetFrame(data, row=["a", "b"])
+    result = FacetFrame(data, row=["a", "b"])
 
     expected = pl.DataFrame(
         {
@@ -78,14 +78,14 @@ def test_facet_frame_row_list(data: pl.DataFrame) -> None:
         },
     )
 
-    assert_frame_equal(ff.group, expected, check_dtypes=False)
-    assert len(ff) == 4
-    assert ff.n_rows == 4
-    assert ff.n_cols == 1
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert len(result) == 4
+    assert result.n_rows == 4
+    assert result.n_cols == 1
 
 
 def test_facet_frame_no_facet(data: pl.DataFrame) -> None:
-    ff = FacetFrame(data)
+    result = FacetFrame(data)
 
     expected = pl.DataFrame(
         {
@@ -94,10 +94,10 @@ def test_facet_frame_no_facet(data: pl.DataFrame) -> None:
         },
     )
 
-    assert_frame_equal(ff.group, expected, check_dtypes=False)
-    assert len(ff) == 1
-    assert ff.n_rows == 1
-    assert ff.n_cols == 1
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert len(result) == 1
+    assert result.n_rows == 1
+    assert result.n_cols == 1
 
 
 def test_group_by_no_by() -> None:
