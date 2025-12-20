@@ -8,10 +8,8 @@ import polars as pl
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from polars import DataFrame, Expr
 
-
-def map_color(data: DataFrame, column: str | Expr) -> Mapping[str, object]:
+def map_color(data: pl.DataFrame, column: str | pl.Expr) -> Mapping[str, object]:
     s = data.select(column).to_series()
 
     if s.dtype != pl.String:

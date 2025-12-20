@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import polars as pl
-from polars import DataFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -14,14 +13,14 @@ COL_INDEX = "_col_index"
 
 
 class FacetData:
-    group: DataFrame
-    data: list[DataFrame]
+    group: pl.DataFrame
+    data: list[pl.DataFrame]
     row: list[str]
     col: list[str]
 
     def __init__(
         self,
-        data: DataFrame,
+        data: pl.DataFrame,
         row: Iterable[str] | None = None,
         col: Iterable[str] | None = None,
     ) -> None:
@@ -57,25 +56,25 @@ def to_list(columns: Iterable[str] | None) -> list[str]:
     return list(columns)
 
 
-def group_by(data: DataFrame, *by: str) -> tuple[DataFrame, list[DataFrame]]:
+def group_by(data: pl.DataFrame, *by: str) -> tuple[pl.DataFrame, list[pl.DataFrame]]:
     if not by:
-        return DataFrame([{}]), [data]
+        return pl.DataFrame([{}]), [data]
 
     if data.is_empty():
-        return DataFrame(schema=by), []
+        return pl.DataFrame(schema=by), []
 
     groups = list(data.group_by(*by, maintain_order=True))
 
     if not groups:
-        return DataFrame(schema=by), []
+        return pl.DataFrame(schema=by), []
 
     names, dfs = zip(*groups, strict=True)
-    group = DataFrame(list(names), schema=by, orient="row")
+    group = pl.DataFrame(list(names), schema=by, orient="row")
 
     return group, list(dfs)
 
 
-def with_index(data: DataFrame, columns: list[str], name: str) -> DataFrame:
+def with_index(data: pl.DataFrame, columns: list[str], name: str) -> pl.DataFrame:
     if not columns:
         return data.with_columns(pl.lit(0).alias(name))
 

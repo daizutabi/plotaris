@@ -14,8 +14,8 @@ from .encoding import Encoding
 from .grid import Facet
 
 if TYPE_CHECKING:
+    import polars as pl
     from matplotlib.axes import Axes
-    from polars import DataFrame, Expr
 
     from plotaris.marks.base import Mark
 
@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 
 
 class Chart:
-    data: DataFrame
+    data: pl.DataFrame
     encoding: Encoding
     mark: Mark | None
     grid: Grid | None
 
     def __init__(
         self,
-        data: DataFrame,
+        data: pl.DataFrame,
         encoding: Encoding | None = None,
         mark: Mark | None = None,
         grid: Grid | None = None,
@@ -42,11 +42,11 @@ class Chart:
 
     def encode(
         self,
-        x: str | Expr | None = None,
-        y: str | Expr | None = None,
-        color: str | Expr | None = None,
-        size: str | Expr | None = None,
-        shape: str | Expr | None = None,
+        x: str | pl.Expr | None = None,
+        y: str | pl.Expr | None = None,
+        color: str | pl.Expr | None = None,
+        size: str | pl.Expr | None = None,
+        shape: str | pl.Expr | None = None,
     ) -> Self:
         """Map variables to visual properties, updating existing encodings."""
         changes = {
