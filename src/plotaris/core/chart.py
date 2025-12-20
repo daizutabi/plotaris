@@ -9,12 +9,13 @@ from plotaris.marks.bar import BarMark
 from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 
+from . import scales
 from .encoding import Encoding
 from .grid import Facet
 
 if TYPE_CHECKING:
-    import polars as pl
     from matplotlib.axes import Axes
+    from polars import DataFrame, Expr
 
     from plotaris.marks.base import Mark
 
@@ -22,14 +23,14 @@ if TYPE_CHECKING:
 
 
 class Chart:
-    data: pl.DataFrame
+    data: DataFrame
     encoding: Encoding
     mark: Mark | None
     grid: Grid | None
 
     def __init__(
         self,
-        data: pl.DataFrame,
+        data: DataFrame,
         encoding: Encoding | None = None,
         mark: Mark | None = None,
         grid: Grid | None = None,
@@ -41,11 +42,11 @@ class Chart:
 
     def encode(
         self,
-        x: str | pl.Expr | None = None,
-        y: str | pl.Expr | None = None,
-        color: str | pl.Expr | None = None,
-        size: str | pl.Expr | None = None,
-        shape: str | pl.Expr | None = None,
+        x: str | Expr | None = None,
+        y: str | Expr | None = None,
+        color: str | Expr | None = None,
+        size: str | Expr | None = None,
+        shape: str | Expr | None = None,
     ) -> Self:
         """Map variables to visual properties, updating existing encodings."""
         changes = {
@@ -96,7 +97,14 @@ class Chart:
         if ax is None:
             ax = plt.gca()
 
-        self.mark.plot(ax, self.data, self.encoding)
+        x, y = self.data.select(x=self.encoding.x, y=self.encoding.y)
+
+        kwargs: dict[str, Any] = {}
+
+        if self.encoding.color is not None:
+            kwargs.update(scales.map_color(self.data, self.encoding.color))
+
+        self.mark.plot(ax=ax, x=x, y=y, **kwargs)
 
         return ax
 

@@ -4,10 +4,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import polars as pl
     from matplotlib.axes import Axes
-
-    from plotaris.core.encoding import Encoding
+    from polars import Series
 
 
 class Mark(ABC):
@@ -17,4 +15,4 @@ class Mark(ABC):
         self.kwargs = kwargs
 
     @abstractmethod
-    def plot(self, ax: Axes, data: pl.DataFrame, encoding: Encoding) -> None: ...
+    def plot(self, ax: Axes, *, x: Series, y: Series, **kwargs: Any) -> None: ...

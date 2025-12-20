@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 from .base import Mark
 
 if TYPE_CHECKING:
-    import polars as pl
     from matplotlib.axes import Axes
-
-    from plotaris.core.encoding import Encoding
+    from polars import Series
 
 
 class BarMark(Mark):
     @override
-    def plot(self, ax: Axes, data: pl.DataFrame, encoding: Encoding) -> None:
-        x, y = data.select(x=encoding.x, y=encoding.y)
-        ax.bar(x, y, **self.kwargs)  # pyright: ignore[reportUnknownMemberType]
+    def plot(self, ax: Axes, *, x: Series, y: Series, **kwargs: Any) -> None:
+        ax.bar(x, y, **self.kwargs, **kwargs)  # pyright: ignore[reportUnknownMemberType]
