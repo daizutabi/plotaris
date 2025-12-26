@@ -8,47 +8,43 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-ROW_INDEX = "_row_index"
-COL_INDEX = "_col_index"
-
-
-class FacetData:
+class GroupedData:
+    dimensions: dict[str, list[str]]
     group: pl.DataFrame
     data: list[pl.DataFrame]
-    row: list[str]
-    col: list[str]
 
     def __init__(
         self,
         data: pl.DataFrame,
-        row: Iterable[str] | None = None,
-        col: Iterable[str] | None = None,
+        dimensions: dict[str, str | Iterable[str]],
     ) -> None:
-        self.row = to_list(row)
-        self.col = to_list(col)
-        self.group, self.data = group_by(data, *self.row, *self.col)
+        self.dimensions = {name: to_list(cs) for name, cs in dimensions.items()}
 
-        self.group = with_index(self.group, self.row, ROW_INDEX)
-        self.group = with_index(self.group, self.col, COL_INDEX)
+        by = (c for cs in self.dimensions.values() for c in cs)
+        self.group, self.data = group_by(data, *by)
+
+        for name, cs in self.dimensions.items():
+            self.group = with_index(self.group, cs, index_name(name))
 
     def __len__(self) -> int:
         return len(self.group)
 
-    @property
-    def n_rows(self) -> int:
-        max_val = self.group[ROW_INDEX].max()
+    def n_unique(self, name: str) -> int:
+        """Returns the number of unique values for a given dimension."""
+        name = index_name(name)
+
+        if name not in self.group.columns:
+            return 0
+
+        max_val = self.group[name].max()
         return 0 if max_val is None else cast("int", max_val) + 1
 
-    @property
-    def n_cols(self) -> int:
-        max_val = self.group[COL_INDEX].max()
-        return 0 if max_val is None else cast("int", max_val) + 1
 
-    def keys(self) -> Iterable[tuple[int, int]]:
-        yield from self.group.select(ROW_INDEX, COL_INDEX).iter_rows()
+def index_name(name: str) -> str:
+    return f"_{name}_index"
 
 
-def to_list(columns: Iterable[str] | None) -> list[str]:
+def to_list(columns: str | Iterable[str] | None) -> list[str]:
     if columns is None:
         return []
     if isinstance(columns, str):

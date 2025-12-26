@@ -9,7 +9,6 @@ from plotaris.marks.bar import BarMark
 from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 
-from . import scales
 from .encoding import Encoding
 from .grid import Facet
 
@@ -99,10 +98,7 @@ class Chart:
 
         x, y = self.data.select(x=self.encoding.x, y=self.encoding.y)
 
-        kwargs: dict[str, Any] = {}
-
-        if self.encoding.color is not None:
-            kwargs.update(scales.map_color(self.data, self.encoding.color))
+        kwargs = self.encoding.map_color(self.data)
 
         self.mark.plot(ax=ax, x=x, y=y, **kwargs)
 
