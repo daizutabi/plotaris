@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class PointMark(Mark):
-    key_map: ClassVar[dict[str, str]] = {"size": "s", "shape": "marker"}
+    kwargs_map: ClassVar[dict[str, str]] = {"size": "s", "shape": "marker"}
 
     @override
     def _plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None:

@@ -10,13 +10,13 @@ if TYPE_CHECKING:
 
 class Mark(ABC):
     kwargs: dict[str, Any]
-    key_map: ClassVar[dict[str, str]] = {}
+    kwargs_map: ClassVar[dict[str, str]] = {}
 
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
     def plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None:
-        kwargs = {self.key_map.get(k, k): v for k, v in kwargs.items()}
+        kwargs = {self.kwargs_map.get(k, k): v for k, v in kwargs.items()}
         self._plot(ax, x=x, y=y, **self.kwargs, **kwargs)
 
     @abstractmethod
