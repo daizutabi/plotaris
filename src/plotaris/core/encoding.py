@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from plotaris.colors import COLORS
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import polars as pl
 
 type Palette = dict[tuple[Any, ...], str] | dict[tuple[Any, ...], int]
@@ -25,6 +27,20 @@ class Encoding:
     """The encoding for the size property."""
     shape: list[str] = field(default_factory=list)
     """The encoding for the shape property (e.g., for scatter plots)."""
+
+    palette_names: ClassVar[list[str]] = ["color", "size", "shape"]
+
+    def get(self, name: str) -> list[str]:
+        if name in self.palette_names:
+            return getattr(self, name)
+
+        msg = f"Encoding has no aesthetic '{name}'"
+        raise KeyError(msg)
+
+    def items(self) -> Iterator[tuple[str, list[str]]]:
+        for name in self.palette_names:
+            if value := getattr(self, name):
+                yield name, value
 
     def create_palettes(self, data: pl.DataFrame) -> dict[str, Palette]:
         """Create palettes (ordered lists of visual properties) for all aesthetics."""

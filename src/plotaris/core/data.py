@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 import polars as pl
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
 
 class GroupedData:
@@ -16,7 +16,7 @@ class GroupedData:
     def __init__(
         self,
         data: pl.DataFrame,
-        mapping: dict[str, str | Iterable[str]],
+        mapping: Mapping[str, str | Iterable[str]],
     ) -> None:
         self.mapping = {name: to_list(cs) for name, cs in mapping.items()}
 

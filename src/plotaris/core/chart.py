@@ -96,33 +96,19 @@ class Chart:
         ax = ax or plt.gca()
 
         palettes = self.encoding.create_palettes(self.data)
+        mapping = dict(self.encoding.items())
+        gd = GroupedData(self.data, mapping)
 
-        mapping: dict[str, Iterable[str]] = {}
-
-        if self.encoding.color:
-            mapping["color"] = self.encoding.color
-        if self.encoding.size:
-            mapping["size"] = self.encoding.size
-        if self.encoding.shape:
-            mapping["shape"] = self.encoding.shape
-
-        gd = GroupedData(self.data, mapping=mapping)
-
-        for df_group in gd.data:
+        for df in gd.data:
             kwargs: dict[str, Any] = {}
 
-            if "color" in palettes:
-                key = df_group.select(self.encoding.color).row(0)
-                kwargs["color"] = palettes["color"][key]
-            if "size" in palettes:
-                key = df_group.select(self.encoding.size).row(0)
-                kwargs["s"] = palettes["size"][key]
-            if "shape" in palettes:
-                key = df_group.select(self.encoding.shape).row(0)
-                kwargs["marker"] = palettes["shape"][key]
+            for name, palette in palettes.items():
+                columns = self.encoding.get(name)
+                key = df.select(columns).row(0)
+                kwargs[name] = palette[key]
 
-            x = df_group.select(self.encoding.x).to_series()
-            y = df_group.select(self.encoding.y).to_series()
+            x = df.select(self.encoding.x).to_series()
+            y = df.select(self.encoding.y).to_series()
 
             self.mark.plot(ax=ax, x=x, y=y, **kwargs)
 

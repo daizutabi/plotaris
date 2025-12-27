@@ -11,5 +11,5 @@ if TYPE_CHECKING:
 
 class LineMark(Mark):
     @override
-    def plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None:
-        ax.plot(x, y, **self.kwargs, **kwargs)  # pyright: ignore[reportUnknownMemberType]
+    def _plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None:
+        ax.plot(x, y, **kwargs)  # pyright: ignore[reportUnknownMemberType]

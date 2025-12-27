@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     import polars as pl
@@ -10,9 +10,14 @@ if TYPE_CHECKING:
 
 class Mark(ABC):
     kwargs: dict[str, Any]
+    key_map: ClassVar[dict[str, str]] = {}
 
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
+    def plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None:
+        kwargs = {self.key_map.get(k, k): v for k, v in kwargs.items()}
+        self._plot(ax, x=x, y=y, **self.kwargs, **kwargs)
+
     @abstractmethod
-    def plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None: ...
+    def _plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None: ...

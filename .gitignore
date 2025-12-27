@@ -1,3 +1,4 @@
+*.png
 .coverage*
 .venv/
 __marimo__/
