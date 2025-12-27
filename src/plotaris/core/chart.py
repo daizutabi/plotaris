@@ -11,36 +11,35 @@ from plotaris.marks.point import PointMark
 
 from .data import GroupedData, to_list
 from .encoding import Encoding
-from .grid import Facet
+from .grid import FacetGrid, FacetSpec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    import numpy as np
     import polars as pl
     from matplotlib.axes import Axes
 
     from plotaris.marks.base import Mark
-
-    from .grid import Grid
 
 
 class Chart:
     data: pl.DataFrame
     encoding: Encoding
     mark: Mark | None
-    grid: Grid | None
+    facet_spec: FacetSpec | None
 
     def __init__(
         self,
         data: pl.DataFrame,
         encoding: Encoding | None = None,
         mark: Mark | None = None,
-        grid: Grid | None = None,
+        facet_spec: FacetSpec | None = None,
     ) -> None:
         self.data = data
         self.encoding = encoding or Encoding()
         self.mark = mark
-        self.grid = grid
+        self.facet_spec = facet_spec
 
     def encode(
         self,
@@ -65,12 +64,16 @@ class Chart:
     def facet(
         self,
         *,
-        row: str | None = None,
-        col: str | None = None,
+        row: str | Iterable[str] | None = None,
+        col: str | Iterable[str] | None = None,
         wrap: int | None = None,
     ) -> Self:
         """Create a facet grid of subplots."""
-        self.grid = Facet(row=row, col=col, wrap=wrap)
+        self.facet_spec = FacetSpec(
+            row=to_list(row) or None,
+            col=to_list(col) or None,
+            wrap=wrap,
+        )
         return self
 
     def mark_point(self, **kwargs: Any) -> Self:
@@ -85,13 +88,15 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    def display(self, ax: Axes | None = None) -> Axes:
+    def display(self, ax: Axes | None = None) -> Axes | np.ndarray[Any, Any]:
         if self.mark is None:
             msg = "Mark must be defined before displaying the chart"
             raise ValueError(msg)
 
-        if self.grid:
-            raise NotImplementedError
+        if self.facet_spec:
+            grid = FacetGrid(self.data, self.encoding, self.facet_spec)
+            grid.plot(self.mark, self.encoding)
+            return grid.axes
 
         ax = ax or plt.gca()
 
@@ -114,5 +119,5 @@ class Chart:
 
         return ax
 
-    def _display_(self) -> Axes:
+    def _display_(self) -> Axes | np.ndarray[Any, Any]:
         return self.display()
