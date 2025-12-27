@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
-import matplotlib.pyplot as plt
-import polars as pl
+from plotaris.colors import COLORS
+
+if TYPE_CHECKING:
+    import polars as pl
+
+type Palette = dict[tuple[Any, ...], str] | dict[tuple[Any, ...], int]
 
 
 @dataclass(frozen=True)
@@ -15,32 +19,36 @@ class Encoding:
     """The encoding for the x-axis."""
     y: str | pl.Expr | None = None
     """The encoding for the y-axis."""
-    color: str | pl.Expr | None = None
+    color: list[str] = field(default_factory=list)
     """The encoding for the color property."""
-    size: str | pl.Expr | None = None
+    size: list[str] = field(default_factory=list)
     """The encoding for the size property."""
-    shape: str | pl.Expr | None = None
+    shape: list[str] = field(default_factory=list)
     """The encoding for the shape property (e.g., for scatter plots)."""
 
-    def map_color(self, data: pl.DataFrame) -> dict[str, Any]:
-        """Generate color mapping based on the encoding and data."""
-        if self.color is None:
-            return {}
+    def create_palettes(self, data: pl.DataFrame) -> dict[str, Palette]:
+        """Create palettes (ordered lists of visual properties) for all aesthetics."""
+        palettes: dict[str, Palette] = {}
 
-        return map_color(data, self.color)
+        if self.color:
+            palettes["color"] = create_palette(data, self.color, COLORS)
+
+        if self.size:
+            sizes = [50, 100, 150, 200, 250]
+            palettes["size"] = create_palette(data, self.size, sizes)
+
+        if self.shape:
+            shapes = ["o", "s", "^", "D", "v"]
+            palettes["shape"] = create_palette(data, self.shape, shapes)
+
+        return palettes
 
 
-def map_color(data: pl.DataFrame, column: str | pl.Expr) -> dict[str, Any]:
-    s = data.select(column).to_series()
-
-    if s.dtype != pl.String:
-        # For now, only handle categorical (string) data
-        # Future implementation will handle continuous data
-        return {}
-
-    categories = s.unique().sort()
-    palette = plt.get_cmap("viridis", len(categories))
-    color_map = {cat: palette(i) for i, cat in enumerate(categories)}
-    colors = [color_map[x] for x in s]
-
-    return {"color": colors}
+def create_palette[T](
+    data: pl.DataFrame,
+    columns: list[str],
+    palette: list[T],
+) -> dict[tuple[Any, ...], T]:
+    """Create an ordered palette of visual properties corresponding to unique data values."""  # noqa: E501
+    rows = data.select(columns).unique(maintain_order=True).rows()
+    return {row: palette[i % len(palette)] for i, row in enumerate(rows)}

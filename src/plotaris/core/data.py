@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
@@ -9,30 +9,70 @@ if TYPE_CHECKING:
 
 
 class GroupedData:
-    dimensions: dict[str, list[str]]
+    mapping: dict[str, list[str]]
     group: pl.DataFrame
     data: list[pl.DataFrame]
 
     def __init__(
         self,
         data: pl.DataFrame,
-        dimensions: dict[str, str | Iterable[str]],
+        mapping: dict[str, str | Iterable[str]],
     ) -> None:
-        self.dimensions = {name: to_list(cs) for name, cs in dimensions.items()}
+        self.mapping = {name: to_list(cs) for name, cs in mapping.items()}
 
-        by = (c for cs in self.dimensions.values() for c in cs)
-        self.group, self.data = group_by(data, *by)
+        if data.is_empty():
+            self.group = pl.DataFrame({n: [] for n in self.mapping})
+            self.data = []
+            return
 
-        for name, cs in self.dimensions.items():
-            self.group = with_index(self.group, cs, index_name(name))
+        by = sorted({c for cs in self.mapping.values() for c in cs})
+
+        if not by:
+            self.group = pl.DataFrame([{}])
+            self.data = [data]
+            return
+
+        group, self.data = group_by(data, *by)
+
+        for name, cs in self.mapping.items():
+            group = with_index(group, cs, f"_{name}_index")
+
+        named_exprs = {name: f"_{name}_index" for name in self.mapping}
+        self.group = group.select(**named_exprs)
 
     def __len__(self) -> int:
         return len(self.group)
 
+    @overload
+    def item(
+        self,
+        index: int,
+        name: str,
+        *,
+        named: Literal[False] = ...,
+    ) -> tuple[Any, ...]: ...
+
+    @overload
+    def item(
+        self,
+        index: int,
+        name: str,
+        *,
+        named: Literal[True],
+    ) -> dict[str, Any]: ...
+
+    def item(
+        self,
+        index: int,
+        name: str,
+        *,
+        named: bool = False,
+    ) -> tuple[Any, ...] | dict[str, Any]:
+        columns = self.mapping[name]
+        return self.data[index].select(columns).row(0, named=named)
+
     def n_unique(self, name: str) -> int:
         """Returns the number of unique values for a given dimension."""
-        name = index_name(name)
-
         if name not in self.group.columns:
             return 0
 
@@ -40,11 +80,7 @@ class GroupedData:
         return 0 if max_val is None else cast("int", max_val) + 1
 
 
-def index_name(name: str) -> str:
-    return f"_{name}_index"
-
-
-def to_list(columns: str | Iterable[str] | None) -> list[str]:
+def to_list(columns: str | Iterable[str] | None, /) -> list[str]:
     if columns is None:
         return []
     if isinstance(columns, str):
@@ -53,12 +89,6 @@ def to_list(columns: str | Iterable[str] | None) -> list[str]:
 
 
 def group_by(data: pl.DataFrame, *by: str) -> tuple[pl.DataFrame, list[pl.DataFrame]]:
-    if not by:
-        return pl.DataFrame([{}]), [data]
-
-    if data.is_empty():
-        return pl.DataFrame(schema=by), []
-
     groups = list(data.group_by(*by, maintain_order=True))
 
     if not groups:
