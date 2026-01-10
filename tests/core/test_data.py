@@ -4,7 +4,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from plotaris.core.data import GroupedData, group_by
+from plotaris.core.data import FacetData, GroupedData, group_by
 
 
 @pytest.fixture(scope="module")
@@ -22,8 +22,8 @@ def test_mapping_str_str(data: pl.DataFrame) -> None:
     result = GroupedData(data, {"row": "a", "col": "b"})
 
     expected = pl.DataFrame({"row": [0, 0, 1, 1], "col": [0, 1, 1, 2]})
-
     assert_frame_equal(result.group, expected, check_dtypes=False)
+
     assert len(result) == 4
     assert result.item(0, "row") == (1,)
     assert result.item(1, "row") == (1,)
@@ -43,8 +43,8 @@ def test_mapping_str_str_duplicated(data: pl.DataFrame) -> None:
     result = GroupedData(data, {"row": "b", "col": "b"})
 
     expected = pl.DataFrame({"row": [0, 1, 2], "col": [0, 1, 2]})
-
     assert_frame_equal(result.group, expected, check_dtypes=False)
+
     assert len(result) == 3
     assert result.item(0, "row") == (3,)
     assert result.item(1, "row") == (4,)
@@ -64,19 +64,19 @@ def test_mapping_str(data: pl.DataFrame, name: str, values: list[int]) -> None:
 
     n = len(values)
     expected = pl.DataFrame({"row": range(n)})
-
     assert_frame_equal(result.group, expected, check_dtypes=False)
+
     assert len(result) == n
     assert result.n_unique("row") == n
     assert result.n_unique("col") == 0
 
 
-def test_mapping_list(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": ["a", "b"]})
+def test_mapping_iterable(data: pl.DataFrame) -> None:
+    result = GroupedData(data, {"row": ("a", "b")})
 
     expected = pl.DataFrame({"row": [0, 1, 2, 3]})
-
     assert_frame_equal(result.group, expected, check_dtypes=False)
+
     assert len(result) == 4
     assert result.item(0, "row") == (1, 3)
     assert result.item(1, "row") == (1, 4)
@@ -87,12 +87,12 @@ def test_mapping_list(data: pl.DataFrame) -> None:
     assert result.n_unique("col") == 0
 
 
-def test_mapping_list_str(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": ["b", "a"], "col": "a"})
+def test_mapping_iterable_str(data: pl.DataFrame) -> None:
+    result = GroupedData(data, {"row": ("b", "a"), "col": "a"})
 
     expected = pl.DataFrame({"row": [0, 1, 2, 3], "col": [0, 0, 1, 1]})
-
     assert_frame_equal(result.group, expected, check_dtypes=False)
+
     assert len(result) == 4
     assert result.item(0, "row") == (3, 1)
     assert result.item(1, "row") == (4, 1)
@@ -108,25 +108,88 @@ def test_mapping_list_str(data: pl.DataFrame) -> None:
     assert result.n_unique("col") == 2
 
 
-def test_mapping_none(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {})
+@pytest.mark.parametrize("mapping", [{}, {"row": ()}])
+def test_mapping_empty(
+    data: pl.DataFrame,
+    mapping: dict[str, str | tuple[str, ...]],
+) -> None:
+    result = GroupedData(data, mapping)
 
     expected = pl.DataFrame([{}])
 
     assert_frame_equal(result.group, expected, check_dtypes=False)
     assert len(result) == 1
+    assert_frame_equal(result.data[0], data)
+
+
+def test_mapping_str_empty(data: pl.DataFrame) -> None:
+    result = GroupedData(data, {"row": "a", "col": ()})
+
+    expected = pl.DataFrame({"row": [0, 1], "col": [0, 0]})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert len(result) == 2
+    assert result.item(0, "row") == (1,)
+    assert result.item(1, "row") == (2,)
+    assert result.item(0, "col") == ()
+    assert result.item(1, "col") == ()
+    assert result.item(1, "col", named=True) == {}
 
 
 def test_data_empty() -> None:
     result = GroupedData(pl.DataFrame(), {"row": ["a"]})
-
     expected = pl.DataFrame({"row": []})
-
     assert_frame_equal(result.group, expected, check_dtypes=False)
-    assert len(result) == 0
 
 
 def test_group_by_no_data() -> None:
     group, dfs = group_by(pl.DataFrame({"x": []}), "x")
     assert_frame_equal(group, pl.DataFrame({"x": []}))
     assert len(dfs) == 0
+
+
+def test_facet_data_empty() -> None:
+    result = FacetData(pl.DataFrame(), ("a",), ("b",))
+    expected = pl.DataFrame({"row": [], "col": []})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert result.nrows == 0
+    assert result.ncols == 0
+
+
+def test_facet_row_empty(data: pl.DataFrame) -> None:
+    result = FacetData(data, col="a")
+    expected = pl.DataFrame({"row": [0, 0], "col": [0, 1]})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert result.nrows == 1
+    assert result.ncols == 2
+
+
+def test_facet_col_empty(data: pl.DataFrame) -> None:
+    result = FacetData(data, row="b")
+    expected = pl.DataFrame({"row": [0, 1, 2], "col": [0, 0, 0]})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert result.nrows == 3
+    assert result.ncols == 1
+
+
+def test_facet_row_col_empty(data: pl.DataFrame) -> None:
+    result = FacetData(data)
+    expected = pl.DataFrame({"row": [0], "col": [0]})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert result.nrows == 1
+    assert result.ncols == 1
+
+
+def test_facet_row_wrap(data: pl.DataFrame) -> None:
+    result = FacetData(data, row="x", wrap=2)
+    expected = pl.DataFrame({"row": [0, 1, 0, 1, 0, 1], "col": [0, 0, 1, 1, 2, 2]})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert result.nrows == 2
+    assert result.ncols == 3
+
+
+def test_facet_col_wrap(data: pl.DataFrame) -> None:
+    result = FacetData(data, col="x", wrap=4)
+    expected = pl.DataFrame({"row": [0, 0, 0, 0, 1, 1], "col": [0, 1, 2, 3, 0, 1]})
+    assert_frame_equal(result.group, expected, check_dtypes=False)
+    assert result.nrows == 2
+    assert result.ncols == 4
