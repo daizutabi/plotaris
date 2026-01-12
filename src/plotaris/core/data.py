@@ -194,14 +194,14 @@ class GroupedData:
         *,
         named: bool = False,
     ) -> list[dict[str, tuple[Any, ...]]] | list[dict[str, dict[str, Any]]]:
-        """Retrieve the grouping values for all data groups.
+        """Retrieve the labels for all data groups.
 
         Args:
             named: If True, the values for each dimension will be dictionaries.
                 Otherwise, they will be tuples.
 
         Returns:
-            A list of dictionaries, where each dictionary represents a group.
+            A list of dictionaries, where each dictionary is a group's label.
         """
         if named:
             return [self.get_label(i, named=True) for i in range(len(self))]
@@ -443,10 +443,8 @@ class FacetData(GroupedData):
             - row (int): The row index of the facet cell.
             - col (int): The column index of the facet cell.
             - data (polars.DataFrame): The DataFrame associated with this cell.
-            - row_group (dict[str, Any]): A dictionary of grouping values for the row
-                                          facet dimension.
-            - col_group (dict[str, Any]): A dictionary of grouping values for the column
-                                          facet dimension.
+            - row_label (dict[str, Any]): The label for the row dimension.
+            - col_label (dict[str, Any]): The label for the column dimension.
         """
         # _lookup has (row, col) -> data_index
         # Iterate in the order the lookup was built (which is from self.index.rows())
