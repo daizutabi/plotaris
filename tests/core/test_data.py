@@ -366,3 +366,22 @@ def test_facet_is_bottommost(
 ) -> None:
     result = FacetData(data, row="a", col="b")
     assert result.is_bottommost(row, col) == expected
+
+
+def test_facet_iterate(data: pl.DataFrame) -> None:
+    result = FacetData(data, row="a", col="b")
+    facets = list(result.iter_facets())
+
+    assert len(facets) == 4
+
+    facet = facets[0]
+    assert facet.row == 0
+    assert facet.col == 0
+    assert facet.row_group == {"a": 1}
+    assert facet.col_group == {"b": 3}
+
+    facet = facets[-1]
+    assert facet.row == 1
+    assert facet.col == 2
+    assert facet.row_group == {"a": 2}
+    assert facet.col_group == {"b": 5}

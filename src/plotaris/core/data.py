@@ -7,12 +7,13 @@ operation for creating faceted plots (small multiples).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
 
 class GroupedData:
@@ -277,6 +278,15 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
     )
 
 
+@dataclass(frozen=True)
+class Facet:
+    row: int
+    col: int
+    data: pl.DataFrame
+    row_group: dict[str, Any]
+    col_group: dict[str, Any]
+
+
 class FacetData(GroupedData):
     """A specialized `GroupedData` for creating 2D facet grids.
 
@@ -403,3 +413,58 @@ class FacetData(GroupedData):
     def is_bottommost(self, row: int, col: int) -> bool:
         """Check if a cell is the bottommost occupied cell in its column."""
         return self._max_row_for_col.get(col) == row
+
+    def iter_facets(
+        self,
+        *,
+        leftmost: bool = False,
+        rightmost: bool = False,
+        topmost: bool = False,
+        bottommost: bool = False,
+    ) -> Iterator[Facet]:
+        """Iterate over occupied facets, yielding coordinates, data, and labels.
+
+        This iterator provides all necessary information for drawing each
+        individual facet that contains data, optionally filtering by edge
+        conditions.
+
+        Args:
+            leftmost: If True, only yields cells that are the leftmost
+                occupied cell in their row.
+            rightmost: If True, only yields cells that are the rightmost
+                occupied cell in their row.
+            topmost: If True, only yields cells that are the topmost
+                occupied cell in their column.
+            bottommost: If True, only yields cells that are the bottommost
+                occupied cell in their column.
+
+        Yields:
+            Facet: A Facet dataclass instance containing:
+            - row (int): The row index of the facet cell.
+            - col (int): The column index of the facet cell.
+            - data (polars.DataFrame): The DataFrame associated with this cell.
+            - row_group (dict[str, Any]): A dictionary of grouping values for the row
+                                          facet dimension.
+            - col_group (dict[str, Any]): A dictionary of grouping values for the column
+                                          facet dimension.
+        """
+        # _lookup has (row, col) -> data_index
+        # Iterate in the order the lookup was built (which is from self.index.rows())
+        for (row, col), index in self._lookup.items():
+            if leftmost and not self.is_leftmost(row, col):
+                continue
+            if rightmost and not self.is_rightmost(row, col):
+                continue
+            if topmost and not self.is_topmost(row, col):
+                continue
+            if bottommost and not self.is_bottommost(row, col):
+                continue
+
+            groups = self.group(index, named=True)
+            yield Facet(
+                row=row,
+                col=col,
+                data=self.data[index],
+                row_group=groups["row"],
+                col_group=groups["col"],
+            )
