@@ -282,3 +282,87 @@ def test_facet_get(data: pl.DataFrame) -> None:
     assert_frame_equal(df, expected, check_dtypes=False)
 
     assert result.get(0, 2) is None
+
+
+@pytest.mark.parametrize(
+    ("row", "col", "expected"),
+    [
+        (0, 0, True),
+        (0, 1, False),
+        (0, 2, False),
+        (1, 0, False),
+        (1, 1, True),
+        (1, 2, False),
+    ],
+)
+def test_facet_is_leftmost(
+    data: pl.DataFrame,
+    row: int,
+    col: int,
+    expected: bool,
+) -> None:
+    result = FacetData(data, row="a", col="b")
+    assert result.is_leftmost(row, col) == expected
+
+
+@pytest.mark.parametrize(
+    ("row", "col", "expected"),
+    [
+        (0, 0, False),
+        (0, 1, True),
+        (0, 2, False),
+        (1, 0, False),
+        (1, 1, False),
+        (1, 2, True),
+    ],
+)
+def test_facet_is_rightmost(
+    data: pl.DataFrame,
+    row: int,
+    col: int,
+    expected: bool,
+) -> None:
+    result = FacetData(data, row="a", col="b")
+    assert result.is_rightmost(row, col) == expected
+
+
+@pytest.mark.parametrize(
+    ("row", "col", "expected"),
+    [
+        (0, 0, True),
+        (0, 1, True),
+        (0, 2, False),
+        (1, 0, False),
+        (1, 1, False),
+        (1, 2, True),
+    ],
+)
+def test_facet_is_topmost(
+    data: pl.DataFrame,
+    row: int,
+    col: int,
+    expected: bool,
+) -> None:
+    result = FacetData(data, row="a", col="b")
+    assert result.is_topmost(row, col) == expected
+
+
+@pytest.mark.parametrize(
+    ("row", "col", "expected"),
+    [
+        (0, 0, True),
+        (0, 1, False),
+        (0, 2, False),
+        (1, 0, False),
+        (1, 1, True),
+        (1, 2, True),
+    ],
+)
+def test_facet_is_bottommost(
+    data: pl.DataFrame,
+    row: int,
+    col: int,
+    expected: bool,
+) -> None:
+    result = FacetData(data, row="a", col="b")
+    assert result.is_bottommost(row, col) == expected

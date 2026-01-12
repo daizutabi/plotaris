@@ -291,6 +291,10 @@ class FacetData(GroupedData):
     """The number of columns in the facet grid."""
     _lookup: dict[tuple[int, int], int]
     """A lookup from (row, col) coordinates to an index in self.data."""
+    _min_col_for_row: dict[int, int]
+    _max_col_for_row: dict[int, int]
+    _min_row_for_col: dict[int, int]
+    _max_row_for_col: dict[int, int]
 
     def __init__(
         self,
@@ -330,23 +334,22 @@ class FacetData(GroupedData):
         self.nrows = self.n_unique("row")
         self.ncols = self.n_unique("col")
 
+        self._prepare()
+
+    def _prepare(self) -> None:
         it = enumerate(self.index.rows())
         self._lookup = {(cast("int", r), cast("int", c)): i for i, (r, c) in it}
 
-    def get(self, row: int, col: int) -> pl.DataFrame | None:
-        """Return the DataFrame for a specific cell.
+        self._min_col_for_row = {}
+        self._max_col_for_row = {}
+        self._min_row_for_col = {}
+        self._max_row_for_col = {}
 
-        Args:
-            row: The row index of the cell.
-            col: The column index of the cell.
-
-        Returns:
-            The DataFrame corresponding to the cell at (row, col), or None
-            if the cell is empty.
-        """
-        if (index := self._lookup.get((row, col))) is not None:
-            return self.data[index]
-        return None
+        for r, c in self._lookup:
+            self._min_col_for_row[r] = min(c, self._min_col_for_row.get(r, c))
+            self._max_col_for_row[r] = max(c, self._max_col_for_row.get(r, c))
+            self._min_row_for_col[c] = min(r, self._min_row_for_col.get(c, r))
+            self._max_row_for_col[c] = max(r, self._max_row_for_col.get(c, r))
 
     def cells(self, *, empty: bool = False) -> list[tuple[int, int]]:
         """Return the coordinates of cells in the facet grid.
@@ -365,3 +368,34 @@ class FacetData(GroupedData):
 
         all_ = [(r, c) for r in range(self.nrows) for c in range(self.ncols)]
         return sorted(set(all_) - set(occupied))
+
+    def get(self, row: int, col: int) -> pl.DataFrame | None:
+        """Return the DataFrame for a specific cell.
+
+        Args:
+            row: The row index of the cell.
+            col: The column index of the cell.
+
+        Returns:
+            The DataFrame corresponding to the cell at (row, col), or None
+            if the cell is empty.
+        """
+        if (index := self._lookup.get((row, col))) is not None:
+            return self.data[index]
+        return None
+
+    def is_leftmost(self, row: int, col: int) -> bool:
+        """Check if a cell is the leftmost occupied cell in its row."""
+        return self._min_col_for_row.get(row) == col
+
+    def is_rightmost(self, row: int, col: int) -> bool:
+        """Check if a cell is the rightmost occupied cell in its row."""
+        return self._max_col_for_row.get(row) == col
+
+    def is_topmost(self, row: int, col: int) -> bool:
+        """Check if a cell is the topmost occupied cell in its column."""
+        return self._min_row_for_col.get(col) == row
+
+    def is_bottommost(self, row: int, col: int) -> bool:
+        """Check if a cell is the bottommost occupied cell in its column."""
+        return self._max_row_for_col.get(col) == row
