@@ -35,21 +35,21 @@ def test_mapping_str_str(data: pl.DataFrame) -> None:
     assert result.item(2, "col") == (4,)
     assert result.item(3, "col") == (5,)
     assert result.item(3, "col", named=True) == {"b": 5}
-    assert result.group(0) == {"row": (1,), "col": (3,)}
-    assert result.group(1) == {"row": (1,), "col": (4,)}
-    assert result.group(2) == {"row": (2,), "col": (4,)}
-    assert result.group(3) == {"row": (2,), "col": (5,)}
-    assert result.group(0, named=True) == {"row": {"a": 1}, "col": {"b": 3}}
-    assert result.group(1, named=True) == {"row": {"a": 1}, "col": {"b": 4}}
-    assert result.group(2, named=True) == {"row": {"a": 2}, "col": {"b": 4}}
-    assert result.group(3, named=True) == {"row": {"a": 2}, "col": {"b": 5}}
-    assert result.groups() == [
+    assert result.get_label(0) == {"row": (1,), "col": (3,)}
+    assert result.get_label(1) == {"row": (1,), "col": (4,)}
+    assert result.get_label(2) == {"row": (2,), "col": (4,)}
+    assert result.get_label(3) == {"row": (2,), "col": (5,)}
+    assert result.get_label(0, named=True) == {"row": {"a": 1}, "col": {"b": 3}}
+    assert result.get_label(1, named=True) == {"row": {"a": 1}, "col": {"b": 4}}
+    assert result.get_label(2, named=True) == {"row": {"a": 2}, "col": {"b": 4}}
+    assert result.get_label(3, named=True) == {"row": {"a": 2}, "col": {"b": 5}}
+    assert result.get_labels() == [
         {"row": (1,), "col": (3,)},
         {"row": (1,), "col": (4,)},
         {"row": (2,), "col": (4,)},
         {"row": (2,), "col": (5,)},
     ]
-    assert result.groups(named=True) == [
+    assert result.get_labels(named=True) == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
@@ -173,7 +173,7 @@ def test_facet_data_empty() -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 0
     assert result.ncols == 0
-    assert result.groups() == []
+    assert result.get_labels() == []
 
 
 def test_facet_row_col(data: pl.DataFrame) -> None:
@@ -182,7 +182,7 @@ def test_facet_row_col(data: pl.DataFrame) -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 3
-    assert result.groups(named=True) == [
+    assert result.get_labels(named=True) == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
@@ -198,7 +198,7 @@ def test_facet_row_empty(data: pl.DataFrame) -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 1
     assert result.ncols == 2
-    assert result.groups() == [
+    assert result.get_labels() == [
         {"row": (), "col": (1,)},
         {"row": (), "col": (2,)},
     ]
@@ -212,7 +212,7 @@ def test_facet_col_empty(data: pl.DataFrame) -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 3
     assert result.ncols == 1
-    assert result.groups(named=True) == [
+    assert result.get_labels(named=True) == [
         {"row": {"b": 3}, "col": {}},
         {"row": {"b": 4}, "col": {}},
         {"row": {"b": 5}, "col": {}},
@@ -227,7 +227,7 @@ def test_facet_row_col_empty(data: pl.DataFrame) -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 1
     assert result.ncols == 1
-    assert result.groups() == [{"row": (), "col": ()}]
+    assert result.get_labels() == [{"row": (), "col": ()}]
     assert result.cells() == [(0, 0)]
     assert result.cells(empty=True) == []
 
@@ -238,7 +238,7 @@ def test_facet_row_wrap(data: pl.DataFrame) -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 3
-    assert result.groups(named=True) == [
+    assert result.get_labels(named=True) == [
         {"row": {"x": 0}, "col": {}},
         {"row": {"x": 1}, "col": {}},
         {"row": {"x": 2}, "col": {}},
@@ -256,7 +256,7 @@ def test_facet_col_wrap(data: pl.DataFrame) -> None:
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 4
-    assert result.groups(named=True) == [
+    assert result.get_labels(named=True) == [
         {"row": {}, "col": {"x": 0}},
         {"row": {}, "col": {"x": 1}},
         {"row": {}, "col": {"x": 2}},
@@ -377,11 +377,11 @@ def test_facet_iterate(data: pl.DataFrame) -> None:
     facet = facets[0]
     assert facet.row == 0
     assert facet.col == 0
-    assert facet.row_group == {"a": 1}
-    assert facet.col_group == {"b": 3}
+    assert facet.row_label == {"a": 1}
+    assert facet.col_label == {"b": 3}
 
     facet = facets[-1]
     assert facet.row == 1
     assert facet.col == 2
-    assert facet.row_group == {"a": 2}
-    assert facet.col_group == {"b": 5}
+    assert facet.row_label == {"a": 2}
+    assert facet.col_label == {"b": 5}

@@ -139,7 +139,7 @@ class GroupedData:
         return df.row(0, named=named)
 
     @overload
-    def group(
+    def get_label(
         self,
         index: int,
         *,
@@ -147,14 +147,14 @@ class GroupedData:
     ) -> dict[str, tuple[Any, ...]]: ...
 
     @overload
-    def group(
+    def get_label(
         self,
         index: int,
         *,
         named: Literal[True],
     ) -> dict[str, dict[str, Any]]: ...
 
-    def group(
+    def get_label(
         self,
         index: int,
         *,
@@ -176,20 +176,20 @@ class GroupedData:
         return {n: self.item(index, n, named=False) for n in self.mapping}
 
     @overload
-    def groups(
+    def get_labels(
         self,
         *,
         named: Literal[False] = ...,
     ) -> list[dict[str, tuple[Any, ...]]]: ...
 
     @overload
-    def groups(
+    def get_labels(
         self,
         *,
         named: Literal[True],
     ) -> list[dict[str, dict[str, Any]]]: ...
 
-    def groups(
+    def get_labels(
         self,
         *,
         named: bool = False,
@@ -204,9 +204,9 @@ class GroupedData:
             A list of dictionaries, where each dictionary represents a group.
         """
         if named:
-            return [self.group(i, named=True) for i in range(len(self))]
+            return [self.get_label(i, named=True) for i in range(len(self))]
 
-        return [self.group(i, named=False) for i in range(len(self))]
+        return [self.get_label(i, named=False) for i in range(len(self))]
 
 
 def to_tuple(values: str | Iterable[str] | None, /) -> tuple[str, ...]:
@@ -283,8 +283,8 @@ class Facet:
     row: int
     col: int
     data: pl.DataFrame
-    row_group: dict[str, Any]
-    col_group: dict[str, Any]
+    row_label: dict[str, Any]
+    col_label: dict[str, Any]
 
 
 class FacetData(GroupedData):
@@ -460,11 +460,11 @@ class FacetData(GroupedData):
             if bottommost and not self.is_bottommost(row, col):
                 continue
 
-            groups = self.group(index, named=True)
+            labels = self.get_label(index, named=True)
             yield Facet(
                 row=row,
                 col=col,
                 data=self.data[index],
-                row_group=groups["row"],
-                col_group=groups["col"],
+                row_label=labels["row"],
+                col_label=labels["col"],
             )
