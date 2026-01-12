@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.2"
 app = marimo.App(width="full")
 
 
@@ -8,28 +8,44 @@ app = marimo.App(width="full")
 def _():
     import plotaris as plts
     import polars as pl
+    from matplotlib.axes import Axes
 
     plts.init()
-    return pl, plts
+    return Axes, pl, plts
 
 
 @app.cell
-def _(pl, plts):
-    # Load penguins dataset
-    # Drop rows with nulls as some mark implementations might not handle them well yet
-    df = pl.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/penguins.csv").drop_nulls()
-
-    # Test faceting: col by species, row by sex
-    facet_chart = (
-        plts.Chart(df)
-        .facet(col="species", row="sex")
-        .encode(x="bill_length_mm", y="bill_depth_mm")
-        .mark_point()
+def _(pl):
+    data = pl.DataFrame(
+        {
+            "a": [1, 1, 1, 2, 2, 2],
+            "b": [3, 3, 4, 4, 5, 5],
+            "x": range(6),
+            "y": range(10, 16),
+        },
     )
-    return df, facet_chart
+    return (data,)
+
 
 @app.cell
-def _(facet_chart):
-    # Display the faceted chart
-    facet_chart
+def _(Axes, pl):
+    def plot(data: pl.DataFrame, *, ax: Axes) -> None:
+        ax.scatter(data["x"], data["y"])
+    return (plot,)
+
+
+@app.cell
+def _(data, plot, plts):
+    grid = plts.FacetGrid(data, row="a", col="b", sharex=True).map_dataframe(plot)
+    grid.map_axes(lambda ax: ax.set(xlabel="a"))
+    grid
     return
+
+
+@app.cell
+def _():
+    return
+
+
+if __name__ == "__main__":
+    app.run()

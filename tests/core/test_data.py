@@ -379,9 +379,17 @@ def test_facet_iterate(data: pl.DataFrame) -> None:
     assert facet.col == 0
     assert facet.row_label == {"a": 1}
     assert facet.col_label == {"b": 3}
+    assert facet.is_leftmost
+    assert facet.is_topmost
+    assert not facet.is_rightmost
+    assert facet.is_bottommost
 
     facet = facets[-1]
     assert facet.row == 1
     assert facet.col == 2
     assert facet.row_label == {"a": 2}
     assert facet.col_label == {"b": 5}
+    assert not facet.is_leftmost
+    assert facet.is_topmost
+    assert facet.is_rightmost
+    assert facet.is_bottommost

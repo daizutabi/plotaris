@@ -23,7 +23,8 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     grid = FacetGrid(df, row="category")
     assert grid.nrows == 2
     assert grid.ncols == 1
-    assert grid.axes.shape == (2, 1)
+    assert (0, 0) in grid.axes
+    assert (1, 0) in grid.axes
 
     def plot(data: pl.DataFrame, ms: int, *, ax: Axes, color: str) -> None:
         ax.scatter(data["x"], data["y"], ms=ms, color=color)  # pyright: ignore[reportUnknownMemberType]

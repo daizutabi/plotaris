@@ -281,10 +281,23 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
 @dataclass(frozen=True)
 class Facet:
     row: int
+    """The row index of the facet cell."""
     col: int
+    """The column index of the facet cell."""
     data: pl.DataFrame
+    """The DataFrame associated with this cell."""
     row_label: dict[str, Any]
+    """The label for the row dimension."""
     col_label: dict[str, Any]
+    """The label for the column dimension."""
+    is_leftmost: bool
+    """True if the cell is the leftmost occupied cell in its row."""
+    is_topmost: bool
+    """True if the cell is the topmost occupied cell in its column."""
+    is_rightmost: bool
+    """True if the cell is the rightmost occupied cell in its row."""
+    is_bottommost: bool
+    """True if the cell is the bottommost occupied cell in its column."""
 
 
 class FacetData(GroupedData):
@@ -402,13 +415,13 @@ class FacetData(GroupedData):
         """Check if a cell is the leftmost occupied cell in its row."""
         return self._min_col_for_row.get(row) == col
 
-    def is_rightmost(self, row: int, col: int) -> bool:
-        """Check if a cell is the rightmost occupied cell in its row."""
-        return self._max_col_for_row.get(row) == col
-
     def is_topmost(self, row: int, col: int) -> bool:
         """Check if a cell is the topmost occupied cell in its column."""
         return self._min_row_for_col.get(col) == row
+
+    def is_rightmost(self, row: int, col: int) -> bool:
+        """Check if a cell is the rightmost occupied cell in its row."""
+        return self._max_col_for_row.get(row) == col
 
     def is_bottommost(self, row: int, col: int) -> bool:
         """Check if a cell is the bottommost occupied cell in its column."""
@@ -418,8 +431,8 @@ class FacetData(GroupedData):
         self,
         *,
         leftmost: bool = False,
-        rightmost: bool = False,
         topmost: bool = False,
+        rightmost: bool = False,
         bottommost: bool = False,
     ) -> Iterator[Facet]:
         """Iterate over occupied facets, yielding coordinates, data, and labels.
@@ -431,31 +444,31 @@ class FacetData(GroupedData):
         Args:
             leftmost: If True, only yields cells that are the leftmost
                 occupied cell in their row.
-            rightmost: If True, only yields cells that are the rightmost
-                occupied cell in their row.
             topmost: If True, only yields cells that are the topmost
                 occupied cell in their column.
+            rightmost: If True, only yields cells that are the rightmost
+                occupied cell in their row.
             bottommost: If True, only yields cells that are the bottommost
                 occupied cell in their column.
 
         Yields:
-            Facet: A Facet dataclass instance containing:
-            - row (int): The row index of the facet cell.
-            - col (int): The column index of the facet cell.
-            - data (polars.DataFrame): The DataFrame associated with this cell.
-            - row_label (dict[str, Any]): The label for the row dimension.
-            - col_label (dict[str, Any]): The label for the column dimension.
+            Facet: A Facet dataclass instance.
         """
         # _lookup has (row, col) -> data_index
         # Iterate in the order the lookup was built (which is from self.index.rows())
         for (row, col), index in self._lookup.items():
-            if leftmost and not self.is_leftmost(row, col):
+            is_leftmost = self.is_leftmost(row, col)
+            is_topmost = self.is_topmost(row, col)
+            is_rightmost = self.is_rightmost(row, col)
+            is_bottommost = self.is_bottommost(row, col)
+
+            if leftmost and not is_leftmost:
                 continue
-            if rightmost and not self.is_rightmost(row, col):
+            if topmost and not is_topmost:
                 continue
-            if topmost and not self.is_topmost(row, col):
+            if rightmost and not is_rightmost:
                 continue
-            if bottommost and not self.is_bottommost(row, col):
+            if bottommost and not is_bottommost:
                 continue
 
             labels = self.get_label(index, named=True)
@@ -465,4 +478,12 @@ class FacetData(GroupedData):
                 data=self.data[index],
                 row_label=labels["row"],
                 col_label=labels["col"],
+                is_leftmost=is_leftmost,
+                is_topmost=is_topmost,
+                is_rightmost=is_rightmost,
+                is_bottommost=is_bottommost,
             )
+
+    def __iter__(self) -> Iterator[Facet]:
+        """Iterate over all occupied facets."""
+        return self.iter_facets()
