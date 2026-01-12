@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self
 
 import matplotlib.pyplot as plt
 
@@ -10,8 +10,19 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import polars as pl
+    from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from numpy.typing import NDArray
+
+
+class Plottable(Protocol):
+    def __call__(
+        self,
+        data: pl.DataFrame,
+        *args: Any,
+        ax: Axes,
+        **kwargs: Any,
+    ) -> Any: ...
 
 
 class FacetGrid:
@@ -58,3 +69,10 @@ class FacetGrid:
     @property
     def ncols(self) -> int:
         return self.facet_data.ncols
+
+    def map_dataframe(self, plot: Plottable, /, *args: Any, **kwargs: Any) -> Self:
+        for facet in self.facet_data.iter_facets():
+            ax = self.axes[facet.row, facet.col]
+            plot(facet.data, *args, ax=ax, **kwargs)
+
+        return self
