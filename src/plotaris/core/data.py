@@ -292,9 +292,13 @@ class FacetData(GroupedData):
     _lookup: dict[tuple[int, int], int]
     """A lookup from (row, col) coordinates to an index in self.data."""
     _min_col_for_row: dict[int, int]
+    """A mapping from row index to the minimum occupied column index."""
     _max_col_for_row: dict[int, int]
+    """A mapping from row index to the maximum occupied column index."""
     _min_row_for_col: dict[int, int]
+    """A mapping from column index to the minimum occupied row index."""
     _max_row_for_col: dict[int, int]
+    """A mapping from column index to the maximum occupied row index."""
 
     def __init__(
         self,
