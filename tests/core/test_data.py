@@ -266,3 +266,19 @@ def test_facet_col_wrap(data: pl.DataFrame) -> None:
     ]
     assert result.cells() == [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1)]
     assert result.cells(empty=True) == [(1, 2), (1, 3)]
+
+
+def test_facet_get(data: pl.DataFrame) -> None:
+    result = FacetData(data, row="a", col="b")
+
+    expected = pl.DataFrame({"a": [1, 1], "b": [3, 3], "x": [0, 1]})
+    df = result.get(0, 0)
+    assert isinstance(df, pl.DataFrame)
+    assert_frame_equal(df, expected, check_dtypes=False)
+
+    expected = pl.DataFrame({"a": [2, 2], "b": [5, 5], "x": [4, 5]})
+    df = result.get(1, 2)
+    assert isinstance(df, pl.DataFrame)
+    assert_frame_equal(df, expected, check_dtypes=False)
+
+    assert result.get(0, 2) is None
