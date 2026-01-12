@@ -289,6 +289,8 @@ class FacetData(GroupedData):
     """The number of rows in the facet grid."""
     ncols: int
     """The number of columns in the facet grid."""
+    _lookup: dict[tuple[int, int], int]
+    """A lookup from (row, col) coordinates to an index in self.data."""
 
     def __init__(
         self,
@@ -315,8 +317,8 @@ class FacetData(GroupedData):
 
         elif row and wrap:
             self.index = self.index.with_columns(
-                (pl.col("row") % wrap).alias("col"),
-                (pl.col("row") // wrap).alias("row"),
+                (pl.col("row") % wrap).alias("row"),
+                (pl.col("row") // wrap).alias("col"),
             )
 
         elif col and wrap:
@@ -328,6 +330,24 @@ class FacetData(GroupedData):
         self.nrows = self.n_unique("row")
         self.ncols = self.n_unique("col")
 
+        it = enumerate(self.index.rows())
+        self._lookup = {(cast("int", r), cast("int", c)): i for i, (r, c) in it}
+
+    def get(self, row: int, col: int) -> pl.DataFrame | None:
+        """Return the DataFrame for a specific cell.
+
+        Args:
+            row: The row index of the cell.
+            col: The column index of the cell.
+
+        Returns:
+            The DataFrame corresponding to the cell at (row, col), or None
+            if the cell is empty.
+        """
+        if (index := self._lookup.get((row, col))) is not None:
+            return self.data[index]
+        return None
+
     def cells(self, *, empty: bool = False) -> list[tuple[int, int]]:
         """Return the coordinates of cells in the facet grid.
 
@@ -338,7 +358,7 @@ class FacetData(GroupedData):
         Returns:
             A list of (row, col) integer tuples.
         """
-        occupied = [(cast("int", r), cast("int", c)) for r, c in self.index.rows()]
+        occupied = list(self._lookup)
 
         if not empty:
             return occupied
