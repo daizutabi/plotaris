@@ -44,32 +44,43 @@ def test_create_palette_dict(df: pl.DataFrame) -> None:
     assert result == expected
 
 
-def test_encoding_get() -> None:
-    enc = Encoding(x="a", y="b", color=("c",), size=("d",))
-    assert enc.get("color") == ("c",)
-    assert enc.get("size") == ("d",)
-    assert enc.get("shape") == ()
-
-
-def test_encoding_get_error() -> None:
-    with pytest.raises(KeyError):
-        enc = Encoding()
-        enc.get("invalid")
-
-
 def test_encoding_items() -> None:
-    enc = Encoding(x="a", y="b", color=("c",), size=("d",))
+    enc = Encoding(color=("c",), size=("d",))
     items = list(enc.items())
     assert items == [("color", ("c",)), ("size", ("d",))]
 
 
-def test_encoding_palettes(mocker: MockerFixture) -> None:
+def test_encoding_set_mock(mocker: MockerFixture) -> None:
     mock_create_palette = mocker.patch(
         "plotaris.core.encoding.create_palette",
         return_value="a",
     )
 
-    enc = Encoding(x="a", y="b", color=("a",), size=("b",))
-    palettes = enc.palettes("a", size=[10, 20])  # pyright: ignore[reportArgumentType]
+    enc = Encoding(color=("a",), size=("b",))
+    palettes = enc.build_palettes(pl.DataFrame(), size=[10, 20])
     assert palettes == {"color": "a", "size": "a"}
-    mock_create_palette.assert_called_with("a", ("b",), [10, 20], SIZES)
+    mock_create_palette.assert_called_with(mocker.ANY, ("b",), [10, 20], SIZES)
+
+
+def test_encoding_set(df: pl.DataFrame) -> None:
+    enc = Encoding(size=("a",))
+    palettes = enc.build_palettes(df)
+    assert palettes == {"size": {("A",): 50, ("B",): 100, ("C",): 150}}
+
+
+@pytest.mark.parametrize(
+    ("index", "size", "shape"),
+    [
+        (0, 50, "o"),
+        (1, 100, "o"),
+        (2, 150, "o"),
+        (3, 200, "s"),
+        (4, 250, "s"),
+        (5, 50, "s"),
+    ],
+)
+def test_encoding_get(df: pl.DataFrame, index: int, size: int, shape: str) -> None:
+    enc = Encoding(size=("a", "b"), shape=("b",))
+    palettes = enc.build_palettes(df)
+    x = df.row(index, named=True)
+    assert enc.get_properties(x, palettes) == {"size": size, "shape": shape}

@@ -43,6 +43,14 @@ class GroupedData:
     def __len__(self) -> int:
         return len(self.index)
 
+    def n_unique(self, name: str) -> int:
+        """Returns the number of unique values for a given dimension."""
+        if name not in self.index.columns:
+            return 0
+
+        max_val = self.index[name].max()
+        return 0 if max_val is None else cast("int", max_val) + 1
+
     @overload
     def item(
         self,
@@ -76,19 +84,56 @@ class GroupedData:
 
         return df.row(0, named=named)
 
-    def group(self, index: int) -> dict[str, dict[str, Any]]:
-        return {n: self.item(index, n, named=True) for n in self.mapping}
+    @overload
+    def group(
+        self,
+        index: int,
+        *,
+        named: Literal[False] = ...,
+    ) -> dict[str, tuple[Any, ...]]: ...
 
-    def groups(self) -> list[dict[str, dict[str, Any]]]:
-        return [self.group(i) for i in range(len(self))]
+    @overload
+    def group(
+        self,
+        index: int,
+        *,
+        named: Literal[True],
+    ) -> dict[str, dict[str, Any]]: ...
 
-    def n_unique(self, name: str) -> int:
-        """Returns the number of unique values for a given dimension."""
-        if name not in self.index.columns:
-            return 0
+    def group(
+        self,
+        index: int,
+        *,
+        named: bool = False,
+    ) -> dict[str, tuple[Any, ...]] | dict[str, dict[str, Any]]:
+        if named:
+            return {n: self.item(index, n, named=True) for n in self.mapping}
 
-        max_val = self.index[name].max()
-        return 0 if max_val is None else cast("int", max_val) + 1
+        return {n: self.item(index, n, named=False) for n in self.mapping}
+
+    @overload
+    def groups(
+        self,
+        *,
+        named: Literal[False] = ...,
+    ) -> list[dict[str, tuple[Any, ...]]]: ...
+
+    @overload
+    def groups(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, dict[str, Any]]]: ...
+
+    def groups(
+        self,
+        *,
+        named: bool = False,
+    ) -> list[dict[str, tuple[Any, ...]]] | list[dict[str, dict[str, Any]]]:
+        if named:
+            return [self.group(i, named=True) for i in range(len(self))]
+
+        return [self.group(i, named=False) for i in range(len(self))]
 
 
 def to_tuple(values: str | Iterable[str] | None, /) -> tuple[str, ...]:

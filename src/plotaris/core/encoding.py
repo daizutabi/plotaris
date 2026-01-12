@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from itertools import cycle
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from plotaris.colors import COLORS
 
@@ -12,7 +12,9 @@ if TYPE_CHECKING:
 
     import polars as pl
 
-type Palette = Mapping[tuple[Any, ...], str | int]
+
+type Property = str | int
+type Palette = Mapping[tuple[Any, ...], Property]
 
 SIZES = [50, 100, 150, 200, 250]
 SHAPES = ["o", "s", "^", "D", "v"]
@@ -22,10 +24,6 @@ SHAPES = ["o", "s", "^", "D", "v"]
 class Encoding:
     """Declaratively specify the mapping between data and visual properties."""
 
-    x: str | pl.Expr | None = None
-    """The encoding for the x-axis."""
-    y: str | pl.Expr | None = None
-    """The encoding for the y-axis."""
     color: tuple[str, ...] = field(default_factory=tuple)
     """The encoding for the color property."""
     size: tuple[str, ...] = field(default_factory=tuple)
@@ -33,26 +31,17 @@ class Encoding:
     shape: tuple[str, ...] = field(default_factory=tuple)
     """The encoding for the shape property (e.g., for scatter plots)."""
 
-    palette_names: ClassVar[tuple[str, ...]] = ("color", "size", "shape")
-
-    def get(self, name: str) -> tuple[str, ...]:
-        if name in self.palette_names:
-            return getattr(self, name)
-
-        msg = f"Encoding has no aesthetic '{name}'"
-        raise KeyError(msg)
-
     def items(self) -> Iterator[tuple[str, tuple[str, ...]]]:
-        for name in self.palette_names:
-            if value := getattr(self, name):
-                yield name, value
+        for f in fields(self):
+            if value := getattr(self, f.name):
+                yield f.name, value
 
-    def palettes(
+    def build_palettes(
         self,
         data: pl.DataFrame,
-        color: Sequence[str] | Mapping[tuple[Any, ...], str] | None = None,
-        size: Sequence[int] | Mapping[tuple[Any, ...], int] | None = None,
-        shape: Sequence[str] | Mapping[tuple[Any, ...], str] | None = None,
+        color: Sequence[Property] | Palette | None = None,
+        size: Sequence[Property] | Palette | None = None,
+        shape: Sequence[Property] | Palette | None = None,
     ) -> dict[str, Palette]:
         """Create palettes (ordered lists of visual properties) for all aesthetics."""
         palette_default = {
@@ -67,6 +56,22 @@ class Encoding:
             palettes[name] = create_palette(data, columns, *palette_default[name])
 
         return palettes
+
+    def get_properties(
+        self,
+        row: Mapping[str, Any],
+        palettes: dict[str, Palette],
+    ) -> dict[str, Property]:
+        """Get the visual properties based on the encoding."""
+        properties: dict[str, Property] = {}
+
+        for name, columns in self.items():
+            if palette := palettes.get(name):
+                values = tuple(row[c] for c in columns)
+                if value := palette.get(values):
+                    properties[name] = value
+
+        return properties
 
 
 def create_palette[T](
