@@ -176,20 +176,24 @@ def test_facet_data_empty() -> None:
     assert result.get_labels() == []
 
 
-def test_facet_row_col(data: pl.DataFrame) -> None:
-    result = FacetData(data, row="a", col="b")
+@pytest.fixture
+def facet_data(data: pl.DataFrame) -> FacetData:
+    return FacetData(data, row="a", col="b")
+
+
+def test_facet_row_col(facet_data: FacetData) -> None:
     expected = pl.DataFrame({"row": [0, 0, 1, 1], "col": [0, 1, 1, 2]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
-    assert result.nrows == 2
-    assert result.ncols == 3
-    assert result.get_labels(named=True) == [
+    assert_frame_equal(facet_data.index, expected, check_dtypes=False)
+    assert facet_data.nrows == 2
+    assert facet_data.ncols == 3
+    assert facet_data.get_labels(named=True) == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 5}},
     ]
-    assert result.cells() == [(0, 0), (0, 1), (1, 1), (1, 2)]
-    assert result.cells(empty=True) == [(0, 2), (1, 0)]
+    assert facet_data.cells() == [(0, 0), (0, 1), (1, 1), (1, 2)]
+    assert facet_data.cells(empty=True) == [(0, 2), (1, 0)]
 
 
 def test_facet_row_empty(data: pl.DataFrame) -> None:
@@ -268,20 +272,18 @@ def test_facet_col_wrap(data: pl.DataFrame) -> None:
     assert result.cells(empty=True) == [(1, 2), (1, 3)]
 
 
-def test_facet_get(data: pl.DataFrame) -> None:
-    result = FacetData(data, row="a", col="b")
-
+def test_facet_get(facet_data: FacetData) -> None:
     expected = pl.DataFrame({"a": [1, 1], "b": [3, 3], "x": [0, 1]})
-    df = result.get(0, 0)
+    df = facet_data.get(0, 0)
     assert isinstance(df, pl.DataFrame)
     assert_frame_equal(df, expected, check_dtypes=False)
 
     expected = pl.DataFrame({"a": [2, 2], "b": [5, 5], "x": [4, 5]})
-    df = result.get(1, 2)
+    df = facet_data.get(1, 2)
     assert isinstance(df, pl.DataFrame)
     assert_frame_equal(df, expected, check_dtypes=False)
 
-    assert result.get(0, 2) is None
+    assert facet_data.get(0, 2) is None
 
 
 @pytest.mark.parametrize(
@@ -296,13 +298,12 @@ def test_facet_get(data: pl.DataFrame) -> None:
     ],
 )
 def test_facet_is_leftmost(
-    data: pl.DataFrame,
+    facet_data: FacetData,
     row: int,
     col: int,
     expected: bool,
 ) -> None:
-    result = FacetData(data, row="a", col="b")
-    assert result.is_leftmost(row, col) == expected
+    assert facet_data.is_leftmost(row, col) == expected
 
 
 @pytest.mark.parametrize(
@@ -317,13 +318,12 @@ def test_facet_is_leftmost(
     ],
 )
 def test_facet_is_rightmost(
-    data: pl.DataFrame,
+    facet_data: FacetData,
     row: int,
     col: int,
     expected: bool,
 ) -> None:
-    result = FacetData(data, row="a", col="b")
-    assert result.is_rightmost(row, col) == expected
+    assert facet_data.is_rightmost(row, col) == expected
 
 
 @pytest.mark.parametrize(
@@ -338,13 +338,12 @@ def test_facet_is_rightmost(
     ],
 )
 def test_facet_is_topmost(
-    data: pl.DataFrame,
+    facet_data: FacetData,
     row: int,
     col: int,
     expected: bool,
 ) -> None:
-    result = FacetData(data, row="a", col="b")
-    assert result.is_topmost(row, col) == expected
+    assert facet_data.is_topmost(row, col) == expected
 
 
 @pytest.mark.parametrize(
@@ -359,18 +358,16 @@ def test_facet_is_topmost(
     ],
 )
 def test_facet_is_bottommost(
-    data: pl.DataFrame,
+    facet_data: FacetData,
     row: int,
     col: int,
     expected: bool,
 ) -> None:
-    result = FacetData(data, row="a", col="b")
-    assert result.is_bottommost(row, col) == expected
+    assert facet_data.is_bottommost(row, col) == expected
 
 
-def test_facet_iterate(data: pl.DataFrame) -> None:
-    result = FacetData(data, row="a", col="b")
-    facets = list(result.iter_facets())
+def test_facet_iterate(facet_data: FacetData) -> None:
+    facets = list(facet_data.iter_facets())
 
     assert len(facets) == 4
 
@@ -393,3 +390,27 @@ def test_facet_iterate(data: pl.DataFrame) -> None:
     assert facet.is_topmost
     assert facet.is_rightmost
     assert facet.is_bottommost
+
+
+def test_facet_iterate_leftmost(facet_data: FacetData) -> None:
+    facets = list(facet_data.iter_facets(leftmost=True))
+    assert len(facets) == 2
+
+
+def test_facet_iterate_topmost(facet_data: FacetData) -> None:
+    facets = list(facet_data.iter_facets(topmost=True))
+    assert len(facets) == 3
+
+
+def test_facet_iterate_rightmost(facet_data: FacetData) -> None:
+    facets = list(facet_data.iter_facets(rightmost=True))
+    assert len(facets) == 2
+
+
+def test_facet_iterate_bottommost(facet_data: FacetData) -> None:
+    facets = list(facet_data.iter_facets(bottommost=True))
+    assert len(facets) == 3
+
+
+def test_iter(facet_data: FacetData) -> None:
+    assert len(list(facet_data)) == len(list(facet_data.iter_facets()))
