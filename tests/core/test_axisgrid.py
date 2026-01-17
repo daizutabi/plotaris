@@ -15,14 +15,18 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="module")
-def grid() -> FacetGrid:
-    data = pl.DataFrame(
+def data() -> pl.DataFrame:
+    return pl.DataFrame(
         {
             "a": [1, 1, 1, 2, 2, 2],
             "b": [3, 3, 4, 4, 5, 5],
             "x": range(6),
         },
     )
+
+
+@pytest.fixture(scope="module")
+def grid(data: pl.DataFrame) -> FacetGrid:
     return FacetGrid(data, row="a", col="b")
 
 
@@ -32,24 +36,77 @@ def test_nrows_ncols(grid: FacetGrid) -> None:
 
 
 def test_axes(grid: FacetGrid) -> None:
-    assert len(grid.axes) == 4
+    assert len(grid.axes) == 6
     assert (0, 0) in grid.axes
     assert (0, 1) in grid.axes
+    assert (0, 2) in grid.axes
+    assert (1, 0) in grid.axes
     assert (1, 1) in grid.axes
     assert (1, 2) in grid.axes
 
 
-def test_display(grid: FacetGrid) -> None:
-    assert grid._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
+@pytest.mark.parametrize(
+    ("name", "rcs"),
+    [
+        ("left", [(0, 0), (1, 0)]),
+        ("top", [(0, 0), (0, 1), (0, 2)]),
+        ("right", [(0, 2), (1, 2)]),
+        ("bottom", [(1, 0), (1, 1), (1, 2)]),
+        ("data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
+        ("empty", [(0, 2), (1, 0)]),
+        ("leftmost", [(0, 0), (1, 1)]),
+        ("topmost", [(0, 0), (0, 1), (1, 2)]),
+        ("rightmost", [(0, 1), (1, 2)]),
+        ("bottommost", [(0, 0), (1, 1), (1, 2)]),
+    ],
+)
+def test_axes_property(grid: FacetGrid, name: str, rcs: list[tuple[int, int]]) -> None:
+    result = getattr(grid, f"{name}_axes")
+    expected = [grid.axes[rc] for rc in rcs]
+    assert result == expected
+
+
+@pytest.fixture(scope="module")
+def grid_delaxes(data: pl.DataFrame) -> FacetGrid:
+    return FacetGrid(data, row="a", col="b").delaxes()
+
+
+@pytest.mark.parametrize(
+    ("name", "rcs"),
+    [
+        ("left", [(0, 0)]),
+        ("top", [(0, 0), (0, 1)]),
+        ("right", [(1, 2)]),
+        ("bottom", [(1, 1), (1, 2)]),
+        ("data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
+        ("empty", []),
+        ("leftmost", [(0, 0), (1, 1)]),
+        ("topmost", [(0, 0), (0, 1), (1, 2)]),
+        ("rightmost", [(0, 1), (1, 2)]),
+        ("bottommost", [(0, 0), (1, 1), (1, 2)]),
+    ],
+)
+def test_axes_property_after_delaxes(
+    grid_delaxes: FacetGrid,
+    name: str,
+    rcs: list[tuple[int, int]],
+) -> None:
+    result = getattr(grid_delaxes, f"{name}_axes")
+    expected = [grid_delaxes.axes[rc] for rc in rcs]
+    assert result == expected
 
 
 def test_iter(grid: FacetGrid) -> None:
-    assert list(grid) == list(grid.axes.values())
+    rcs = [(0, 0), (0, 1), (1, 1), (1, 2)]
+    expected = [grid.axes[rc] for rc in rcs]
+    assert list(grid) == expected
 
 
 def test_items(grid: FacetGrid) -> None:
+    rcs = [(0, 0), (0, 1), (1, 1), (1, 2)]
+    expected = [grid.axes[rc] for rc in rcs]
     axes = [a for a, _ in grid.items()]
-    assert axes == list(grid.axes.values())
+    assert axes == expected
 
 
 def test_map_facet(grid: FacetGrid) -> None:
@@ -60,7 +117,7 @@ def test_map_facet(grid: FacetGrid) -> None:
 
     grid.map_facet(func)
 
-    assert axes == list(grid.axes.values())
+    assert axes == grid.data_axes
 
 
 def test_map_dataframe(mocker: MockerFixture) -> None:
@@ -102,3 +159,7 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     assert y.to_list() == [7, 8]
     assert kwargs["ms"] == 5
     assert kwargs["color"] == "red"
+
+
+def test_display(grid: FacetGrid) -> None:
+    assert grid._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]

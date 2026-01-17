@@ -62,16 +62,14 @@ class FacetGrid:
             **fig_kw,
         )
 
-        for r, c in self.facet_data.cells(empty=True):
-            self.figure.delaxes(cast("Axes", axes[r, c]))
+        rcs = ((r, c) for r in range(self.nrows) for c in range(self.ncols))
+        self.axes = {rc: cast("Axes", axes[*rc]) for rc in rcs}
 
-        self.axes = {rc: cast("Axes", axes[*rc]) for rc in self.facet_data.cells()}
+        # for f in self.facet_data.iter_facets(bottommost=True):
+        #     self.axes[f.row, f.col].tick_params(labelbottom=True)
 
-        for f in self.facet_data.iter_facets(bottommost=True):
-            self.axes[f.row, f.col].tick_params(labelbottom=True)  # pyright: ignore[reportUnknownMemberType]
-
-        for f in self.facet_data.iter_facets(leftmost=True):
-            self.axes[f.row, f.col].tick_params(labelleft=True)  # pyright: ignore[reportUnknownMemberType]
+        # for f in self.facet_data.iter_facets(leftmost=True):
+        #     self.axes[f.row, f.col].tick_params(labelleft=True)
 
     @property
     def nrows(self) -> int:
@@ -81,17 +79,70 @@ class FacetGrid:
     def ncols(self) -> int:
         return self.facet_data.ncols
 
-    def _display_(self) -> Figure:
-        return self.figure
+    def get_axes(self, row: int, col: int) -> Axes | None:
+        ax = self.axes.get((row, col))
+        return ax if ax in self.figure.axes else None
+
+    @property
+    def left_axes(self) -> list[Axes]:
+        return [a for row in range(self.nrows) if (a := self.get_axes(row, 0))]
+
+    @property
+    def top_axes(self) -> list[Axes]:
+        return [a for col in range(self.ncols) if (a := self.get_axes(0, col))]
+
+    @property
+    def right_axes(self) -> list[Axes]:
+        col = self.ncols - 1
+        return [a for row in range(self.nrows) if (a := self.get_axes(row, col))]
+
+    @property
+    def bottom_axes(self) -> list[Axes]:
+        row = self.nrows - 1
+        return [a for col in range(self.ncols) if (a := self.get_axes(row, col))]
+
+    @property
+    def data_axes(self) -> list[Axes]:
+        cells = self.facet_data.cells().filter(has_data=True)
+        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+
+    @property
+    def empty_axes(self) -> list[Axes]:
+        cells = self.facet_data.cells().filter(has_data=False)
+        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+
+    @property
+    def leftmost_axes(self) -> list[Axes]:
+        cells = self.facet_data.cells().filter(is_leftmost=True)
+        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+
+    @property
+    def topmost_axes(self) -> list[Axes]:
+        cells = self.facet_data.cells().filter(is_topmost=True)
+        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+
+    @property
+    def rightmost_axes(self) -> list[Axes]:
+        cells = self.facet_data.cells().filter(is_rightmost=True)
+        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+
+    @property
+    def bottommost_axes(self) -> list[Axes]:
+        cells = self.facet_data.cells().filter(is_bottommost=True)
+        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+
+    def delaxes(self) -> Self:
+        for ax in self.empty_axes:
+            self.figure.delaxes(ax)
+        return self
 
     def __iter__(self) -> Iterator[Axes]:
-        for facet in self.facet_data:
-            yield self.axes[facet.row, facet.col]
+        yield from self.data_axes
 
     def items(self) -> Iterator[tuple[Axes, Facet]]:
         for facet in self.facet_data:
-            ax = self.axes[facet.row, facet.col]
-            yield ax, facet
+            if ax := self.get_axes(facet.row, facet.col):
+                yield ax, facet
 
     def map_facet(
         self,
@@ -116,3 +167,6 @@ class FacetGrid:
             func(facet.data, *args, ax=ax, **kwargs)
 
         return self
+
+    def _display_(self) -> Figure:
+        return self.figure
