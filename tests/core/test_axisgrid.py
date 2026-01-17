@@ -3,12 +3,64 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import polars as pl
+import pytest
 
 from plotaris.core.axisgrid import FacetGrid
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from pytest_mock import MockerFixture
+
+    from plotaris.core.data import Facet
+
+
+@pytest.fixture(scope="module")
+def grid() -> FacetGrid:
+    data = pl.DataFrame(
+        {
+            "a": [1, 1, 1, 2, 2, 2],
+            "b": [3, 3, 4, 4, 5, 5],
+            "x": range(6),
+        },
+    )
+    return FacetGrid(data, row="a", col="b")
+
+
+def test_nrows_ncols(grid: FacetGrid) -> None:
+    assert grid.nrows == 2
+    assert grid.ncols == 3
+
+
+def test_axes(grid: FacetGrid) -> None:
+    assert len(grid.axes) == 4
+    assert (0, 0) in grid.axes
+    assert (0, 1) in grid.axes
+    assert (1, 1) in grid.axes
+    assert (1, 2) in grid.axes
+
+
+def test_display(grid: FacetGrid) -> None:
+    assert grid._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
+
+
+def test_iter(grid: FacetGrid) -> None:
+    assert list(grid) == list(grid.axes.values())
+
+
+def test_items(grid: FacetGrid) -> None:
+    axes = [a for a, _ in grid.items()]
+    assert axes == list(grid.axes.values())
+
+
+def test_map_facet(grid: FacetGrid) -> None:
+    axes: list[Axes] = []
+
+    def func(facet: Facet, *, ax: Axes) -> None:  # pyright: ignore[reportUnusedParameter]
+        axes.append(ax)
+
+    grid.map_facet(func)
+
+    assert axes == list(grid.axes.values())
 
 
 def test_map_dataframe(mocker: MockerFixture) -> None:
