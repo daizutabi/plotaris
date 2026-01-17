@@ -63,7 +63,7 @@ class GroupedData:
         by = sorted({c for cs in self.mapping.values() for c in cs})
 
         if not by:
-            self.index = pl.DataFrame([{}])
+            self.index = pl.DataFrame({n: [0] for n in mapping} if mapping else [{}])
             self.data = [data]
             return
 
@@ -342,12 +342,8 @@ class FacetData(GroupedData):
         """
         super().__init__(data, {"row": row, "col": col})
 
-        if not row and not col:
-            # For a non-faceted plot, create a single 1x1 grid.
-            self.index: pl.DataFrame = pl.DataFrame({"row": [0], "col": [0]})
-
-        elif row and wrap:
-            self.index = self.index.with_columns(
+        if row and wrap:
+            self.index: pl.DataFrame = self.index.with_columns(
                 (pl.col("row") % wrap).alias("row"),
                 (pl.col("row") // wrap).alias("col"),
             )

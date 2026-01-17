@@ -135,7 +135,7 @@ def test_mapping_empty(
 ) -> None:
     result = GroupedData(data, mapping)
 
-    expected = pl.DataFrame([{}])
+    expected = pl.DataFrame({"row": [0]} if mapping else [{}])
 
     assert_frame_equal(result.index, expected, check_dtypes=False)
     assert len(result) == 1
