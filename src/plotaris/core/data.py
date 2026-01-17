@@ -1,4 +1,4 @@
-"""Provide data structures for handling grouped and faceted data.
+"""Provides data structures for handling grouped and faceted data.
 
 The main classes, `GroupedData` and `FacetData`, are used to partition a
 DataFrame into smaller chunks based on grouping variables, which is a core
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class GroupedData:
-    """Group a DataFrame and provides integer indices for accessing groups.
+    """Group a DataFrame and provide integer indices for accessing groups.
 
     This class takes a DataFrame and a mapping of dimension names (e.g., "row",
     "col") to column names in the DataFrame. It groups the data by these
@@ -76,17 +76,21 @@ class GroupedData:
         self.index = index.select(**named_exprs)
 
     def __len__(self) -> int:
-        """Return the total number of data groups."""
+        """Get the total number of data groups.
+
+        Returns:
+            The number of groups.
+        """
         return len(self.index)
 
     def n_unique(self, name: str) -> int:
-        """Return the number of unique values for a given dimension.
+        """Get the number of unique values for a given dimension.
 
         Args:
             name: The name of the dimension (e.g., "row", "col").
 
         Returns:
-            The number of unique values.
+            The number of unique values in the dimension.
         """
         if name not in self.index.columns:
             return 0
@@ -123,9 +127,9 @@ class GroupedData:
 
         Args:
             index: The integer index of the data group.
-            name: The name of the dimension.
-            named: If True, returns a dictionary mapping column names to
-                values. Otherwise, returns a tuple of values.
+            name: The name of the dimension (e.g., "row", "col").
+            named: If True, return a dictionary mapping column names to
+                values. If False, return a tuple of values.
 
         Returns:
             A tuple or dictionary of the grouping values.
@@ -165,7 +169,7 @@ class GroupedData:
         Args:
             index: The integer index of the data group.
             named: If True, the values for each dimension will be dictionaries.
-                Otherwise, they will be tuples.
+                If False, they will be tuples.
 
         Returns:
             A dictionary mapping dimension names to their grouping values.
@@ -198,7 +202,7 @@ class GroupedData:
 
         Args:
             named: If True, the values for each dimension will be dictionaries.
-                Otherwise, they will be tuples.
+                If False, they will be tuples.
 
         Returns:
             A list of dictionaries, where each dictionary is a group's label.
@@ -212,10 +216,11 @@ class GroupedData:
 def to_tuple(values: str | Iterable[str] | None, /) -> tuple[str, ...]:
     """Convert a value to a tuple of strings.
 
-    Handles None, a single string, or an iterable of strings.
+    This utility function handles None, a single string, or an iterable of
+    strings and ensures the output is always a tuple of strings.
 
     Args:
-        values: The input value.
+        values: The input value to convert.
 
     Returns:
         A tuple of strings.
@@ -228,18 +233,20 @@ def to_tuple(values: str | Iterable[str] | None, /) -> tuple[str, ...]:
 
 
 def group_by(data: pl.DataFrame, *by: str) -> tuple[pl.DataFrame, list[pl.DataFrame]]:
-    """Group a DataFrame and returns keys and data chunks.
+    """Group a DataFrame and return keys and data chunks.
 
     This is a wrapper around `polars.DataFrame.group_by` that formats the
-    output into a DataFrame of group keys and a list of DataFrames.
+    output into a DataFrame of group keys and a list of DataFrames, which is
+    a more convenient structure for subsequent processing.
 
     Args:
         data: The DataFrame to group.
-        *by: The column names to group by.
+        by: The column names to group by.
 
     Returns:
-        A tuple containing a DataFrame of group keys and a list of the
-        group DataFrames.
+        A tuple containing:
+            - A DataFrame of unique group keys.
+            - A list of DataFrames, each corresponding to a group.
     """
     groups = list(data.group_by(*by, maintain_order=True))
 
@@ -280,6 +287,12 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
 
 @dataclass(frozen=True)
 class Cell:
+    """Represent a single cell in a facet grid.
+
+    A cell is a coordinate in the grid and holds metadata about its position
+    and whether it contains data.
+    """
+
     row: int
     """The row index of the facet cell."""
     col: int
@@ -296,14 +309,21 @@ class Cell:
     """True if the cell is the bottommost occupied cell in its column."""
 
     def __iter__(self) -> Iterator[int]:
+        """Allow unpacking the cell as `row, col`."""
         yield self.row
         yield self.col
 
 
 @dataclass(frozen=True)
 class Facet(Cell):
+    """Represent a cell in the grid that contains data.
+
+    A Facet extends a Cell with the actual data subset and labels for that
+    position in the grid.
+    """
+
     data: pl.DataFrame
-    """The DataFrame associated with this cell."""
+    """The DataFrame subset associated with this facet."""
     row_label: dict[str, Any]
     """The label for the row dimension."""
     col_label: dict[str, Any]
@@ -311,15 +331,28 @@ class Facet(Cell):
 
 
 class Collection[T: Cell]:
+    """A generic container for a list of `Cell` or `Facet` objects.
+
+    Provides a convenient `filter` method to select items based on their
+    attributes.
+    """
+
     items: list[T]
 
     def __init__(self, items: Iterable[T]) -> None:
+        """Initialize the Collection.
+
+        Args:
+            items: An iterable of items to be stored in the collection.
+        """
         self.items = list(items)
 
     def __iter__(self) -> Iterator[T]:
+        """Return an iterator over the items in the collection."""
         return iter(self.items)
 
     def __len__(self) -> int:
+        """Return the number of items in the collection."""
         return len(self.items)
 
     def filter(
@@ -332,8 +365,20 @@ class Collection[T: Cell]:
         is_rightmost: bool | None = None,
         is_bottommost: bool | None = None,
     ) -> Collection[T]:
-        """Filter the collection based on a predicate and optional conditions."""
-        items = self.items
+        """Filter the collection based on a predicate and/or attributes.
+
+        Args:
+            predicate: A callable that returns True for items to be included.
+            has_data: Filter by the `has_data` attribute.
+            is_leftmost: Filter by the `is_leftmost` attribute.
+            is_topmost: Filter by the `is_topmost` attribute.
+            is_rightmost: Filter by the `is_rightmost` attribute.
+            is_bottommost: Filter by the `is_bottommost` attribute.
+
+        Returns:
+            A new `Collection` containing only the filtered items.
+        """
+        items = iter(self.items)
         if predicate:
             items = (item for item in items if predicate(item))
         if has_data is not None:
@@ -362,15 +407,10 @@ class FacetData(GroupedData):
     ncols: int
     """The number of columns in the facet grid."""
     _lookup: dict[tuple[int, int], int]
-    """A lookup from (row, col) coordinates to an index in self.data."""
     _min_col_for_row: dict[int, int]
-    """A mapping from row index to the minimum occupied column index."""
     _max_col_for_row: dict[int, int]
-    """A mapping from row index to the maximum occupied column index."""
     _min_row_for_col: dict[int, int]
-    """A mapping from column index to the minimum occupied row index."""
     _max_row_for_col: dict[int, int]
-    """A mapping from column index to the maximum occupied row index."""
 
     def __init__(
         self,
@@ -386,8 +426,7 @@ class FacetData(GroupedData):
             row: Column(s) to define the rows of the facet grid.
             col: Column(s) to define the columns of the facet grid.
             wrap: If provided, wraps a 1D facet grid (defined by `row` or
-                `col`) into a 2D grid with this many columns (if `col` is
-                set) or rows (if `row` is set).
+                `col`) into a 2D grid with this many columns.
         """
         super().__init__(data, {"row": row, "col": col})
 
@@ -409,6 +448,7 @@ class FacetData(GroupedData):
         self._prepare()
 
     def _prepare(self) -> None:
+        """Compute and cache lookup tables for grid metadata."""
         it = enumerate(self.index.rows())
         self._lookup = {(cast("int", r), cast("int", c)): i for i, (r, c) in it}
 
@@ -424,7 +464,15 @@ class FacetData(GroupedData):
             self._max_row_for_col[c] = max(r, self._max_row_for_col.get(c, r))
 
     def cell(self, row: int, col: int) -> Cell:
-        """Return a Cell for the specified coordinates."""
+        """Get a `Cell` object for the specified grid coordinates.
+
+        Args:
+            row: The row index of the cell.
+            col: The column index of the cell.
+
+        Returns:
+            A `Cell` instance with metadata for the specified location.
+        """
         return Cell(
             row,
             col,
@@ -436,11 +484,27 @@ class FacetData(GroupedData):
         )
 
     def cells(self) -> Collection[Cell]:
-        """Return a collection of all cells in the facet grid."""
+        """Get a collection of all cells in the facet grid.
+
+        Returns:
+            A `Collection` of `Cell` objects for every position in the grid.
+        """
         items = [self.cell(r, c) for r in range(self.nrows) for c in range(self.ncols)]
         return Collection(items)
 
     def facet(self, row: int, col: int) -> Facet | None:
+        """Get a `Facet` object for the specified grid coordinates.
+
+        If the cell at the given coordinates contains data, this method returns
+        a `Facet` object which includes the data subset and labels.
+
+        Args:
+            row: The row index of the facet.
+            col: The column index of the facet.
+
+        Returns:
+            A `Facet` instance if the cell has data, otherwise `None`.
+        """
         cell = self.cell(row, col)
 
         if not cell.has_data:
@@ -463,22 +527,27 @@ class FacetData(GroupedData):
         )
 
     def facets(self) -> Collection[Facet]:
+        """Get a collection of all facets that have data.
+
+        Returns:
+            A `Collection` containing all `Facet` objects with data.
+        """
         items = [f for c in self.cells() if (f := self.facet(c.row, c.col))]
         return Collection(items)
 
     def __iter__(self) -> Iterator[Facet]:
-        """Iterate over all occupied facets."""
+        """Iterate over all facets that have associated data."""
         yield from self.facets()
 
     def get(self, row: int, col: int) -> pl.DataFrame | None:
-        """Return the DataFrame for a specific cell.
+        """Get the DataFrame for a specific cell.
 
         Args:
             row: The row index of the cell.
             col: The column index of the cell.
 
         Returns:
-            The DataFrame corresponding to the cell at (row, col), or None
+            The DataFrame corresponding to the cell at (row, col), or `None`
             if the cell is empty.
         """
         if facet := self.facet(row, col):
