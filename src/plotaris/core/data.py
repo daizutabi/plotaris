@@ -287,7 +287,7 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
 
 @dataclass(frozen=True)
 class Facet:
-    """Represent a single facet in a grid."""
+    """Represent a single cell in the facet grid, which may or may not contain data."""
 
     row: int
     """The row index of the facet cell."""
@@ -310,7 +310,7 @@ class Facet:
     is_bottommost: bool
     """True if the cell is the bottommost occupied cell in its column."""
     data: pl.DataFrame | None
-    """The DataFrame subset associated with this facet."""
+    """The DataFrame subset for this facet, or `None` if the facet is empty."""
     row_label: dict[str, Any]
     """The label for the row dimension."""
     col_label: dict[str, Any]
@@ -327,13 +327,9 @@ class Facet:
 
 
 class FacetCollection[T: Facet]:
-    """A generic container for a list of `Facet` objects.
+    """A collection of `Facet` objects, providing methods for filtering and access."""
 
-    Provides a convenient `filter` method to select items based on their
-    attributes.
-    """
-
-    items: list[T]
+    _items: list[T]
     _lookup: dict[tuple[int, int], T]
 
     def __init__(self, items: Iterable[T]) -> None:
@@ -342,16 +338,16 @@ class FacetCollection[T: Facet]:
         Args:
             items: An iterable of items to be stored in the collection.
         """
-        self.items = list(items)
-        self._lookup = {(i.row, i.col): i for i in self.items}
+        self._items = list(items)
+        self._lookup = {(i.row, i.col): i for i in self._items}
 
     def __iter__(self) -> Iterator[T]:
         """Return an iterator over the items in the collection."""
-        return iter(self.items)
+        return iter(self._items)
 
     def __len__(self) -> int:
         """Return the number of items in the collection."""
-        return len(self.items)
+        return len(self._items)
 
     def __contains__(self, other: Any) -> bool:
         return other in self._lookup
@@ -379,8 +375,8 @@ class FacetCollection[T: Facet]:
 
         Args:
             predicate: A callable that returns True for items to be included.
-            row: If specified, select only axes in this absolute row index.
-            col: If specified, select only axes in this absolute column index.
+            row: If specified, select only facets in this absolute row index.
+            col: If specified, select only facets in this absolute column index.
             has_data: Filter by the `has_data` attribute.
             is_left: Filter by the `is_left` attribute.
             is_top: Filter by the `is_top` attribute.
@@ -394,7 +390,7 @@ class FacetCollection[T: Facet]:
         Returns:
             A new `Collection` containing only the filtered items.
         """
-        items = iter(self.items)
+        items = iter(self._items)
         if predicate:
             items = (item for item in items if predicate(item))
         if row is not None:
@@ -529,16 +525,17 @@ class FacetData(GroupedData):
         )
 
     def facets(self) -> FacetCollection[Facet]:
-        """Get a collection of all facets that have data.
+        """Get a collection of all facets in the grid, including empty ones.
 
         Returns:
-            A `Collection` containing all `Facet` objects with data.
+            A `FacetCollection` containing a `Facet` object for every
+            position in the grid.
         """
         items = [self.facet(r, c) for r in range(self.nrows) for c in range(self.ncols)]
         return FacetCollection(items)
 
     def __iter__(self) -> Iterator[Facet]:
-        """Iterate over all facets that have associated data."""
+        """Iterate over all facets in the grid."""
         yield from self.facets()
 
     def get(self, row: int, col: int) -> pl.DataFrame | None:

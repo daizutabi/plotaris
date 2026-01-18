@@ -95,6 +95,11 @@ def test_axes_property_after_delaxes(
     assert result == expected
 
 
+def test_facet_axes_display(grid: FacetGrid) -> None:
+    assert grid.facet_axes._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
+    assert grid.facet_axes.filter(row=10)._display_() is None  # pyright: ignore[reportPrivateUsage]
+
+
 def test_map(grid: FacetGrid) -> None:
     axes: list[Axes] = []
 
@@ -148,5 +153,5 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     assert kwargs["color"] == "red"
 
 
-def test_display(grid: FacetGrid) -> None:
+def test_facet_grid_display(grid: FacetGrid) -> None:
     assert grid._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]

@@ -544,4 +544,4 @@ def test_facets_filter_false_has_data(
 
 
 def test_iter(facet_data: FacetData) -> None:
-    assert len(list(facet_data)) == len(facet_data.facets().items)
+    assert len(list(facet_data)) == len(facet_data.facets()._items)  # pyright: ignore[reportPrivateUsage]
