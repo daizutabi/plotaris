@@ -75,30 +75,6 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
 
         return self
 
-    def map_axes[**P](
-        self,
-        func: Callable[Concatenate[Axes, P], Any],
-        /,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> Self:
-        """Apply a function to each axes in the collection.
-
-        The function is called with the `Axes` object as the first argument.
-
-        Args:
-            func: A callable that accepts a `Axes` object as the first argument.
-            *args: Additional positional arguments to pass to `func`.
-            **kwargs: Additional keyword arguments to pass to `func`.
-
-        Returns:
-            The collection instance for method chaining.
-        """
-        for facet_axes in self:
-            func(facet_axes.axes, *args, **kwargs)
-
-        return self
-
     def map_dataframe[**P](
         self,
         func: Callable[Concatenate[pl.DataFrame, P], Any],
@@ -128,9 +104,33 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
 
         return self
 
+    def map_axes[**P](
+        self,
+        func: Callable[Concatenate[Axes, P], Any],
+        /,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> Self:
+        """Apply a function to each axes in the collection.
+
+        The function is called with the `Axes` object as the first argument.
+
+        Args:
+            func: A callable that accepts a `Axes` object as the first argument.
+            *args: Additional positional arguments to pass to `func`.
+            **kwargs: Additional keyword arguments to pass to `func`.
+
+        Returns:
+            The collection instance for method chaining.
+        """
+        for axes in self.axes:
+            func(axes, *args, **kwargs)
+
+        return self
+
     def set(self, **kwargs: Any) -> Self:
-        for facet_axes in self:
-            facet_axes.axes.set(**kwargs)
+        for axes in self.axes:
+            axes.set(**kwargs)
 
         return self
 
@@ -249,7 +249,7 @@ class FacetGrid:
         self.facet_axes = FacetAxesCollection(f for f in self.facet_axes if f.has_data)
         return self
 
-    def filter(
+    def select(
         self,
         predicate: Callable[[FacetAxes], bool] | None = None,
         *,

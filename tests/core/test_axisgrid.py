@@ -60,7 +60,11 @@ def test_axes(grid: FacetGrid) -> None:
         ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
     ],
 )
-def test_axes_property(grid: FacetGrid, name: str, rcs: list[tuple[int, int]]) -> None:
+def test_facet_axes_filter(
+    grid: FacetGrid,
+    name: str,
+    rcs: list[tuple[int, int]],
+) -> None:
     result = grid.facet_axes.filter(**{name: True}).axes  # pyright: ignore[reportArgumentType]
     expected = [grid.facet_axes[rc] for rc in rcs]
     assert result == expected
