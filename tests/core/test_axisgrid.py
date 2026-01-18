@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from pytest_mock import MockerFixture
 
-    from plotaris.core.data import Facet
+    from plotaris.core.axisgrid import FacetAxes
 
 
 @pytest.fixture(scope="module")
@@ -37,13 +37,13 @@ def test_nrows_ncols(grid: FacetGrid) -> None:
 
 
 def test_axes(grid: FacetGrid) -> None:
-    assert len(grid.axes) == 6
-    assert (0, 0) in grid.axes
-    assert (0, 1) in grid.axes
-    assert (0, 2) in grid.axes
-    assert (1, 0) in grid.axes
-    assert (1, 1) in grid.axes
-    assert (1, 2) in grid.axes
+    assert len(grid.facet_axes) == 6
+    assert (0, 0) in grid.facet_axes
+    assert (0, 1) in grid.facet_axes
+    assert (0, 2) in grid.facet_axes
+    assert (1, 0) in grid.facet_axes
+    assert (1, 1) in grid.facet_axes
+    assert (1, 2) in grid.facet_axes
 
 
 @pytest.mark.parametrize(
@@ -61,8 +61,8 @@ def test_axes(grid: FacetGrid) -> None:
     ],
 )
 def test_axes_property(grid: FacetGrid, name: str, rcs: list[tuple[int, int]]) -> None:
-    result = grid.select_axes(**{name: True})
-    expected = [grid.axes[rc] for rc in rcs]
+    result = grid.facet_axes.filter(**{name: True}).axes  # pyright: ignore[reportArgumentType]
+    expected = [grid.facet_axes[rc] for rc in rcs]
     assert result == expected
 
 
@@ -90,33 +90,20 @@ def test_axes_property_after_delaxes(
     name: str,
     rcs: list[tuple[int, int]],
 ) -> None:
-    result = grid_delaxes.select_axes(**{name: True})
-    expected = [grid_delaxes.axes[rc] for rc in rcs]
+    result = grid_delaxes.facet_axes.filter(**{name: True}).axes  # pyright: ignore[reportArgumentType]
+    expected = [grid_delaxes.facet_axes[rc] for rc in rcs]
     assert result == expected
 
 
-def test_iter(grid: FacetGrid) -> None:
-    rcs = [(0, 0), (0, 1), (1, 1), (1, 2)]
-    expected = [grid.axes[rc] for rc in rcs]
-    assert list(grid) == expected
-
-
-def test_items(grid: FacetGrid) -> None:
-    rcs = [(0, 0), (0, 1), (1, 1), (1, 2)]
-    expected = [grid.axes[rc] for rc in rcs]
-    axes = [a for a, _ in grid.items()]
-    assert axes == expected
-
-
-def test_map_facet(grid: FacetGrid) -> None:
+def test_map(grid: FacetGrid) -> None:
     axes: list[Axes] = []
 
-    def func(facet: Facet) -> None:  # pyright: ignore[reportUnusedParameter]
+    def func(facet_axes: FacetAxes) -> None:  # pyright: ignore[reportUnusedParameter]
         axes.append(plt.gca())
 
-    grid.map_facet(func)
+    grid.facet_axes.map(func)
 
-    assert axes == grid.select_axes(has_data=True)
+    assert axes == grid.axes
 
 
 def test_map_dataframe(mocker: MockerFixture) -> None:
@@ -131,15 +118,15 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     grid = FacetGrid(df, row="category")
     assert grid.nrows == 2
     assert grid.ncols == 1
-    assert (0, 0) in grid.axes
-    assert (1, 0) in grid.axes
+    assert (0, 0) in grid.facet_axes
+    assert (1, 0) in grid.facet_axes
 
     def plot(data: pl.DataFrame, ms: int, *, color: str) -> None:
         ax = plt.gca()
         ax.scatter(data["x"], data["y"], ms=ms, color=color)  # pyright: ignore[reportUnknownMemberType]
 
     mock_scatter = mocker.patch("matplotlib.axes.Axes.scatter")
-    grid.map_dataframe(plot, 5, color="red")
+    grid.facet_axes.map_dataframe(plot, 5, color="red")
 
     assert mock_scatter.call_count == 2
     calls = mock_scatter.call_args_list

@@ -1,19 +1,102 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Concatenate, Literal, Self, cast
+from dataclasses import dataclass, fields
+from typing import TYPE_CHECKING, Any, Concatenate, Literal, Self
 
 import matplotlib.pyplot as plt
 
-from .data import FacetData
+from .data import Facet, FacetCollection, FacetData
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator
+    from collections.abc import Callable, Iterable
 
     import polars as pl
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from .data import Facet
+
+@dataclass(frozen=True)
+class FacetAxes(Facet):
+    """Represent a single facet with axes in a grid."""
+
+    axes: Axes
+    """The label for the column dimension."""
+
+    @classmethod
+    def from_facet(
+        cls,
+        facet: Facet,
+        axes: Axes,
+    ) -> Self:
+        kwargs = {f.name: getattr(facet, f.name) for f in fields(facet)}
+        return cls(**kwargs, axes=axes)
+
+
+class FacetAxesCollection(FacetCollection[FacetAxes]):
+    def get_axes(self, row: int, col: int) -> Axes | None:
+        if facet_axes := self.get(row, col):
+            return facet_axes.axes
+        return None
+
+    def __getitem__(self, rc: tuple[int, int]) -> Axes | None:
+        return self.get_axes(*rc)
+
+    @property
+    def axes(self) -> list[Axes]:
+        return [facet_axes.axes for facet_axes in self]
+
+    def map[**P](
+        self,
+        func: Callable[Concatenate[FacetAxes, P], Any],
+        /,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> Self:
+        """Apply a plotting function to each facet.
+
+        The function is called with the `FacetAxes` object as the first argument.
+
+        Args:
+            func: A callable that accepts a `Facet` as the first argument.
+            *args: Additional positional arguments to pass to `func`.
+            **kwargs: Additional keyword arguments to pass to `func`.
+
+        Returns:
+            The `FacetGrid` instance for method chaining.
+        """
+        for facet_axes in self:
+            plt.sca(facet_axes.axes)
+            func(facet_axes, *args, **kwargs)
+
+        return self
+
+    def map_dataframe[**P](
+        self,
+        func: Callable[Concatenate[pl.DataFrame, P], Any],
+        /,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> Self:
+        """Apply a plotting function to each facet's DataFrame.
+
+        The function is called with the `polars.DataFrame` subset for each
+        facet as the first argument.
+
+        Args:
+            func: A callable that accepts a `polars.DataFrame` as the
+                first argument.
+            *args: Additional positional arguments to pass to `func`.
+            **kwargs: Additional keyword arguments to pass to `func`.
+
+        Returns:
+            The `FacetGrid` instance for method chaining.
+        """
+        for facet_axes in self:
+            if facet_axes.data is not None:
+                plt.sca(facet_axes.axes)
+                func(facet_axes.data, *args, **kwargs)
+
+        return self
 
 
 class FacetGrid:
@@ -30,8 +113,7 @@ class FacetGrid:
     """An instance of `FacetData` that manages the data partitioning for the grid."""
     figure: Figure
     """The main matplotlib `Figure` object."""
-    axes: dict[tuple[int, int], Axes]
-    """A dictionary mapping grid coordinates `(row, col)` to `Axes` objects."""
+    facet_axes: FacetAxesCollection
 
     def __init__(
         self,
@@ -81,11 +163,9 @@ class FacetGrid:
             **fig_kw,
         )
 
-        cells = self.facet_data.cells()
-        self.axes = {(c.row, c.col): cast("Axes", axes[c.row, c.col]) for c in cells}
-
-        # rcs = ((r, c) for r in range(self.nrows) for c in range(self.ncols))
-        # self.axes = {rc: cast("Axes", axes[*rc]) for rc in rcs}
+        facets = self.facet_data.facets()
+        facet_axes = (FacetAxes.from_facet(f, axes[f.row, f.col]) for f in facets)
+        self.facet_axes = FacetAxesCollection(facet_axes)
 
     @property
     def nrows(self) -> int:
@@ -97,90 +177,9 @@ class FacetGrid:
         """Get the number of columns in the facet grid."""
         return self.facet_data.ncols
 
-    def get_axes(self, row: int, col: int) -> Axes | None:
-        """Get the `Axes` object at a specific grid location.
-
-        This method safely retrieves an axis, returning `None` if the axis has
-        been deleted from the figure.
-
-        Args:
-            row: The row index of the axis.
-            col: The column index of the axis.
-
-        Returns:
-            The `Axes` object at `(row, col)`, or `None` if it does not exist.
-        """
-        ax = self.axes.get((row, col))
-        return ax if ax in self.figure.axes else None
-
-    def select_axes(
-        self,
-        *,
-        row: int | None = None,
-        col: int | None = None,
-        has_data: bool | None = None,
-        is_left: bool | None = None,
-        is_top: bool | None = None,
-        is_right: bool | None = None,
-        is_bottom: bool | None = None,
-        is_leftmost: bool | None = None,
-        is_topmost: bool | None = None,
-        is_rightmost: bool | None = None,
-        is_bottommost: bool | None = None,
-    ) -> list[Axes]:
-        """Selects a subset of `Axes` objects from the grid based on specified criteria.
-
-        This method allows for flexible filtering of the grid's `Axes` objects
-        by their properties, such as whether they contain data, their absolute
-        position in the grid, or their relative position (e.g., leftmost, topmost).
-
-        Args:
-            row: If specified, select only axes in this absolute row index.
-            col: If specified, select only axes in this absolute column index.
-            has_data: If True, select only axes with associated data.
-                If False, select only axes without associated data (empty cells).
-                If None, do not filter by data presence.
-            is_left: If True, select only axes that are in the leftmost column.
-                If False, select axes not in the leftmost column.
-                If None, do not filter by this property.
-            is_top: If True, select only axes that are in the topmost row.
-                If False, select axes not in the topmost row.
-                If None, do not filter by this property.
-            is_right: If True, select only axes that are in the rightmost column.
-                If False, select axes not in the rightmost column.
-                If None, do not filter by this property.
-            is_bottom: If True, select only axes that are in the bottommost row.
-                If False, select axes not in the bottommost row.
-                If None, do not filter by this property.
-            is_leftmost: If True, select only axes that are the leftmost
-                occupied cell in their row. If False, select axes that are
-                not the leftmost occupied cell in their row. If None, do not
-                filter by this property.
-            is_topmost: Similar to `is_leftmost`, but for the topmost
-                occupied cell in its column.
-            is_rightmost: Similar to `is_leftmost`, but for the rightmost
-                occupied cell in its row.
-            is_bottommost: Similar to `is_leftmost`, but for the bottommost
-                occupied cell in its column.
-
-        Returns:
-            A list of `Axes` objects that match all specified criteria.
-        """
-
-        cells = self.facet_data.cells().filter(
-            row=row,
-            col=col,
-            has_data=has_data,
-            is_left=is_left,
-            is_top=is_top,
-            is_right=is_right,
-            is_bottom=is_bottom,
-            is_leftmost=is_leftmost,
-            is_topmost=is_topmost,
-            is_rightmost=is_rightmost,
-            is_bottommost=is_bottommost,
-        )
-        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
+    @property
+    def axes(self) -> list[Axes]:
+        return self.facet_axes.axes
 
     def delaxes(self) -> Self:
         """Delete all empty axes from the figure.
@@ -191,77 +190,10 @@ class FacetGrid:
         Returns:
             The `FacetGrid` instance for method chaining.
         """
-        for ax in self.select_axes(has_data=False):
+        for ax in self.facet_axes.filter(has_data=False).axes:
             self.figure.delaxes(ax)
-        return self
 
-    def __iter__(self) -> Iterator[Axes]:
-        """Iterate over the axes that have data."""
-        yield from self.select_axes(has_data=True)
-
-    def items(self) -> Iterator[tuple[Axes, Facet]]:
-        """Iterate over pairs of (`Axes`, `Facet`) for facets with data.
-
-        This is analogous to `dict.items()`, providing both the plotting
-        surface (`Axes`) and the data/metadata container (`Facet`).
-
-        Yields:
-            Tuples of (`Axes`, `Facet`).
-        """
-        for facet in self.facet_data:
-            if ax := self.get_axes(facet.row, facet.col):
-                yield ax, facet
-
-    def map_facet[**P](
-        self,
-        func: Callable[Concatenate[Facet, P], Any],
-        /,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> Self:
-        """Apply a plotting function to each facet.
-
-        The function is called with the `Facet` object as the first argument.
-
-        Args:
-            func: A callable that accepts a `Facet` as the first argument.
-            *args: Additional positional arguments to pass to `func`.
-            **kwargs: Additional keyword arguments to pass to `func`.
-
-        Returns:
-            The `FacetGrid` instance for method chaining.
-        """
-        for ax, facet in self.items():
-            plt.sca(ax)
-            func(facet, *args, **kwargs)
-
-        return self
-
-    def map_dataframe[**P](
-        self,
-        func: Callable[Concatenate[pl.DataFrame, P], Any],
-        /,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> Self:
-        """Apply a plotting function to each facet's DataFrame.
-
-        The function is called with the `polars.DataFrame` subset for each
-        facet as the first argument.
-
-        Args:
-            func: A callable that accepts a `polars.DataFrame` as the
-                first argument.
-            *args: Additional positional arguments to pass to `func`.
-            **kwargs: Additional keyword arguments to pass to `func`.
-
-        Returns:
-            The `FacetGrid` instance for method chaining.
-        """
-        for ax, facet in self.items():
-            plt.sca(ax)
-            func(facet.data, *args, **kwargs)
-
+        self.facet_axes = FacetAxesCollection(f for f in self.facet_axes if f.has_data)
         return self
 
     def _display_(self) -> Figure:

@@ -192,10 +192,10 @@ def test_facet_row_col(facet_data: FacetData) -> None:
         {"row": {"a": 2}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 5}},
     ]
-    cells = facet_data.cells()
-    assert len(cells) == 6
-    assert len(cells.filter(has_data=True)) == 4
-    assert len(cells.filter(has_data=False)) == 2
+    facets = facet_data.facets()
+    assert len(facets) == 6
+    assert len(facets.filter(has_data=True)) == 4
+    assert len(facets.filter(has_data=False)) == 2
 
 
 def test_facet_row_empty(data: pl.DataFrame) -> None:
@@ -208,10 +208,10 @@ def test_facet_row_empty(data: pl.DataFrame) -> None:
         {"row": (), "col": (1,)},
         {"row": (), "col": (2,)},
     ]
-    cells = result.cells()
-    assert len(cells) == 2
-    assert len(cells.filter(has_data=True)) == 2
-    assert len(cells.filter(has_data=False)) == 0
+    facets = result.facets()
+    assert len(facets) == 2
+    assert len(facets.filter(has_data=True)) == 2
+    assert len(facets.filter(has_data=False)) == 0
 
 
 def test_facet_col_empty(data: pl.DataFrame) -> None:
@@ -225,10 +225,10 @@ def test_facet_col_empty(data: pl.DataFrame) -> None:
         {"row": {"b": 4}, "col": {}},
         {"row": {"b": 5}, "col": {}},
     ]
-    cells = result.cells()
-    assert len(cells) == 3
-    assert len(cells.filter(has_data=True)) == 3
-    assert len(cells.filter(has_data=False)) == 0
+    facets = result.facets()
+    assert len(facets) == 3
+    assert len(facets.filter(has_data=True)) == 3
+    assert len(facets.filter(has_data=False)) == 0
 
 
 def test_facet_row_col_empty(data: pl.DataFrame) -> None:
@@ -238,10 +238,10 @@ def test_facet_row_col_empty(data: pl.DataFrame) -> None:
     assert result.nrows == 1
     assert result.ncols == 1
     assert result.get_labels() == [{"row": (), "col": ()}]
-    cells = result.cells()
-    assert len(cells) == 1
-    assert len(cells.filter(has_data=True)) == 1
-    assert len(cells.filter(has_data=False)) == 0
+    facets = result.facets()
+    assert len(facets) == 1
+    assert len(facets.filter(has_data=True)) == 1
+    assert len(facets.filter(has_data=False)) == 0
 
 
 def test_facet_row_wrap(data: pl.DataFrame) -> None:
@@ -258,10 +258,10 @@ def test_facet_row_wrap(data: pl.DataFrame) -> None:
         {"row": {"x": 4}, "col": {}},
         {"row": {"x": 5}, "col": {}},
     ]
-    cells = result.cells()
-    assert len(cells) == 6
-    assert len(cells.filter(has_data=True)) == 6
-    assert len(cells.filter(has_data=False)) == 0
+    facets = result.facets()
+    assert len(facets) == 6
+    assert len(facets.filter(has_data=True)) == 6
+    assert len(facets.filter(has_data=False)) == 0
 
 
 def test_facet_col_wrap(data: pl.DataFrame) -> None:
@@ -278,10 +278,10 @@ def test_facet_col_wrap(data: pl.DataFrame) -> None:
         {"row": {}, "col": {"x": 4}},
         {"row": {}, "col": {"x": 5}},
     ]
-    cells = result.cells()
-    assert len(cells) == 8
-    assert len(cells.filter(has_data=True)) == 6
-    assert len(cells.filter(has_data=False)) == 2
+    facets = result.facets()
+    assert len(facets) == 8
+    assert len(facets.filter(has_data=True)) == 6
+    assert len(facets.filter(has_data=False)) == 2
 
 
 def test_facet_get(facet_data: FacetData) -> None:
@@ -299,7 +299,7 @@ def test_facet_get(facet_data: FacetData) -> None:
 
 
 def test_cell_itere(facet_data: FacetData) -> None:
-    r, c = facet_data.cell(0, 0)
+    r, c = facet_data.facet(0, 0)
     assert r == 0
     assert c == 0
 
@@ -363,20 +363,20 @@ def test_cell_itere(facet_data: FacetData) -> None:
         ("is_bottommost", 1, 2, True),
     ],
 )
-def test_cell_attribute(
+def test_facet_attribute(
     facet_data: FacetData,
     name: str,
     row: int,
     col: int,
     expected: bool,
 ) -> None:
-    assert getattr(facet_data.cell(row, col), name) is expected
+    assert getattr(facet_data.facet(row, col), name) is expected
 
 
 def test_facets(facet_data: FacetData) -> None:
     facets = list(facet_data.facets())
 
-    assert len(facets) == 4
+    assert len(facets) == 6
 
     facet = facets[0]
     assert facet.row == 0
@@ -400,9 +400,9 @@ def test_facets(facet_data: FacetData) -> None:
 
 
 def test_cells_filter_predicate(facet_data: FacetData) -> None:
-    cells = facet_data.cells().filter(lambda c: c.row == 0)
-    assert len(cells) == 3
-    assert all(c.row == 0 for c in cells)
+    facets = facet_data.facets().filter(lambda c: c.row == 0)
+    assert len(facets) == 3
+    assert all(f.row == 0 for f in facets)
 
 
 @pytest.mark.parametrize(
@@ -416,14 +416,14 @@ def test_cells_filter_predicate(facet_data: FacetData) -> None:
         ("col", 2, [(0, 2), (1, 2)]),
     ],
 )
-def test_cells_filter_row_col(
+def test_facets_filter_row_col(
     facet_data: FacetData,
     name: str,
     value: int,
     expected: list[tuple[int, int]],
 ) -> None:
-    cells = facet_data.cells().filter(**{name: value})  # pyright: ignore[reportArgumentType]
-    result = [(c.row, c.col) for c in cells]
+    facets = facet_data.facets().filter(**{name: value})  # pyright: ignore[reportArgumentType]
+    result = [(f.row, f.col) for f in facets]
     assert result == expected
 
 
@@ -441,13 +441,13 @@ def test_cells_filter_row_col(
         ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
     ],
 )
-def test_cells_filter_true(
+def test_facets_filter_true(
     facet_data: FacetData,
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    cells = facet_data.cells().filter(**{name: True})  # pyright: ignore[reportArgumentType]
-    result = [(c.row, c.col) for c in cells]
+    facets = facet_data.facets().filter(**{name: True})  # pyright: ignore[reportArgumentType]
+    result = [(f.row, f.col) for f in facets]
     assert result == expected
 
 
@@ -465,13 +465,13 @@ def test_cells_filter_true(
         ("is_bottommost", [(0, 1), (0, 2), (1, 0)]),
     ],
 )
-def test_cells_filter_false(
+def test_facets_filter_false(
     facet_data: FacetData,
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    cells = facet_data.cells().filter(**{name: False})  # pyright: ignore[reportArgumentType]
-    result = [(c.row, c.col) for c in cells]
+    facets = facet_data.facets().filter(**{name: False})  # pyright: ignore[reportArgumentType]
+    result = [(f.row, f.col) for f in facets]
     assert result == expected
 
 
@@ -486,13 +486,13 @@ def test_cells_filter_false(
         ("col", 2, [(1, 2)]),
     ],
 )
-def test_facets_filter_row_col(
+def test_facets_filter_row_col_has_data(
     facet_data: FacetData,
     name: str,
     value: int,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(**{name: value})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(has_data=True, **{name: value})  # pyright: ignore[reportArgumentType]
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
@@ -510,18 +510,13 @@ def test_facets_filter_row_col(
         ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
     ],
 )
-def test_facets_filter_true(
+def test_facets_filter_true_has_data(
     facet_data: FacetData,
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    kwargs = {name: True}
-    facets = facet_data.facets().filter(**kwargs)  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(has_data=True, **{name: True})  # pyright: ignore[reportArgumentType]
     result = [(f.row, f.col) for f in facets]
-    assert result == expected
-
-    cells = facet_data.cells().filter(has_data=True, **kwargs)  # pyright: ignore[reportArgumentType]
-    result = [(c.row, c.col) for c in cells]
     assert result == expected
 
 
@@ -538,18 +533,13 @@ def test_facets_filter_true(
         ("is_bottommost", [(0, 1)]),
     ],
 )
-def test_facets_filter_false(
+def test_facets_filter_false_has_data(
     facet_data: FacetData,
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    kwargs = {name: False}
-    facets = facet_data.facets().filter(**kwargs)  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(has_data=True, **{name: False})  # pyright: ignore[reportArgumentType]
     result = [(f.row, f.col) for f in facets]
-    assert result == expected
-
-    cells = facet_data.cells().filter(has_data=True, **kwargs)  # pyright: ignore[reportArgumentType]
-    result = [(c.row, c.col) for c in cells]
     assert result == expected
 
 

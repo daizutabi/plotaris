@@ -7,7 +7,7 @@ operation for creating faceted plots (small multiples).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, overload
 
 import polars as pl
@@ -286,19 +286,13 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
 
 
 @dataclass(frozen=True)
-class Cell:
-    """Represent a single cell in a facet grid.
-
-    A cell is a coordinate in the grid and holds metadata about its position
-    and whether it contains data.
-    """
+class Facet:
+    """Represent a single facet in a grid."""
 
     row: int
     """The row index of the facet cell."""
     col: int
     """The column index of the facet cell."""
-    has_data: bool
-    """True if the cell has associated data."""
     is_left: bool
     """True if the cell is in the leftmost column (col = 0) of the grid."""
     is_top: bool
@@ -315,48 +309,32 @@ class Cell:
     """True if the cell is the rightmost occupied cell in its row."""
     is_bottommost: bool
     """True if the cell is the bottommost occupied cell in its column."""
-
-    def __iter__(self) -> Iterator[int]:
-        """Allow unpacking the cell as `row, col`."""
-        yield self.row
-        yield self.col
-
-
-@dataclass(frozen=True)
-class Facet(Cell):
-    """Represent a cell in the grid that contains data.
-
-    A Facet extends a Cell with the actual data subset and labels for that
-    position in the grid.
-    """
-
-    data: pl.DataFrame
+    data: pl.DataFrame | None
     """The DataFrame subset associated with this facet."""
     row_label: dict[str, Any]
     """The label for the row dimension."""
     col_label: dict[str, Any]
     """The label for the column dimension."""
 
-    @classmethod
-    def from_cell(
-        cls,
-        cell: Cell,
-        data: pl.DataFrame,
-        row_label: dict[str, Any],
-        col_label: dict[str, Any],
-    ) -> Self:
-        kwargs = {f.name: getattr(cell, f.name) for f in fields(cell)}
-        return cls(**kwargs, data=data, row_label=row_label, col_label=col_label)
+    def __iter__(self) -> Iterator[int]:
+        """Allow unpacking the cell as `row, col`."""
+        yield self.row
+        yield self.col
+
+    @property
+    def has_data(self) -> bool:
+        return self.data is not None
 
 
-class Collection[T: Cell]:
-    """A generic container for a list of `Cell` or `Facet` objects.
+class FacetCollection[T: Facet]:
+    """A generic container for a list of `Facet` objects.
 
     Provides a convenient `filter` method to select items based on their
     attributes.
     """
 
     items: list[T]
+    _lookup: dict[tuple[int, int], T]
 
     def __init__(self, items: Iterable[T]) -> None:
         """Initialize the Collection.
@@ -365,6 +343,7 @@ class Collection[T: Cell]:
             items: An iterable of items to be stored in the collection.
         """
         self.items = list(items)
+        self._lookup = {(i.row, i.col): i for i in self.items}
 
     def __iter__(self) -> Iterator[T]:
         """Return an iterator over the items in the collection."""
@@ -373,6 +352,12 @@ class Collection[T: Cell]:
     def __len__(self) -> int:
         """Return the number of items in the collection."""
         return len(self.items)
+
+    def __contains__(self, other: Any) -> bool:
+        return other in self._lookup
+
+    def get(self, row: int, col: int) -> T | None:
+        return self._lookup.get((row, col))
 
     def filter(
         self,
@@ -389,7 +374,7 @@ class Collection[T: Cell]:
         is_topmost: bool | None = None,
         is_rightmost: bool | None = None,
         is_bottommost: bool | None = None,
-    ) -> Collection[T]:
+    ) -> Self:
         """Filter the collection based on a predicate and/or attributes.
 
         Args:
@@ -434,7 +419,7 @@ class Collection[T: Cell]:
             items = (item for item in items if item.is_rightmost is is_rightmost)
         if is_bottommost is not None:
             items = (item for item in items if item.is_bottommost is is_bottommost)
-        return Collection(items)
+        return self.__class__(items)
 
 
 class FacetData(GroupedData):
@@ -506,20 +491,30 @@ class FacetData(GroupedData):
             self._min_row_for_col[c] = min(r, self._min_row_for_col.get(c, r))
             self._max_row_for_col[c] = max(r, self._max_row_for_col.get(c, r))
 
-    def cell(self, row: int, col: int) -> Cell:
-        """Get a `Cell` object for the specified grid coordinates.
+    def facet(self, row: int, col: int) -> Facet:
+        """Get a `Facet` object for the specified grid coordinates.
 
         Args:
             row: The row index of the cell.
             col: The column index of the cell.
 
         Returns:
-            A `Cell` instance with metadata for the specified location.
+            A `Facet` instance with metadata for the specified location.
         """
-        return Cell(
+        if (row, col) in self._lookup:
+            index = self._lookup[row, col]
+            data = self.data[index]
+            labels = self.get_label(index, named=True)
+            row_label = labels["row"]
+            col_label = labels["col"]
+        else:
+            data = None
+            row_label = {}
+            col_label = {}
+
+        return Facet(
             row,
             col,
-            has_data=(row, col) in self._lookup,
             is_left=(col == 0),
             is_top=(row == 0),
             is_right=(col == self.ncols - 1),
@@ -528,53 +523,19 @@ class FacetData(GroupedData):
             is_topmost=self._min_row_for_col.get(col) == row,
             is_rightmost=self._max_col_for_row.get(row) == col,
             is_bottommost=self._max_row_for_col.get(col) == row,
+            data=data,
+            row_label=row_label,
+            col_label=col_label,
         )
 
-    def cells(self) -> Collection[Cell]:
-        """Get a collection of all cells in the facet grid.
-
-        Returns:
-            A `Collection` of `Cell` objects for every position in the grid.
-        """
-        items = [self.cell(r, c) for r in range(self.nrows) for c in range(self.ncols)]
-        return Collection(items)
-
-    def facet(self, row: int, col: int) -> Facet | None:
-        """Get a `Facet` object for the specified grid coordinates.
-
-        If the cell at the given coordinates contains data, this method returns
-        a `Facet` object which includes the data subset and labels.
-
-        Args:
-            row: The row index of the facet.
-            col: The column index of the facet.
-
-        Returns:
-            A `Facet` instance if the cell has data, otherwise `None`.
-        """
-        cell = self.cell(row, col)
-
-        if not cell.has_data:
-            return None
-
-        index = self._lookup[row, col]
-        labels = self.get_label(index, named=True)
-
-        return Facet.from_cell(
-            cell,
-            data=self.data[index],
-            row_label=labels["row"],
-            col_label=labels["col"],
-        )
-
-    def facets(self) -> Collection[Facet]:
+    def facets(self) -> FacetCollection[Facet]:
         """Get a collection of all facets that have data.
 
         Returns:
             A `Collection` containing all `Facet` objects with data.
         """
-        items = [f for c in self.cells() if (f := self.facet(c.row, c.col))]
-        return Collection(items)
+        items = [self.facet(r, c) for r in range(self.nrows) for c in range(self.ncols)]
+        return FacetCollection(items)
 
     def __iter__(self) -> Iterator[Facet]:
         """Iterate over all facets that have associated data."""
@@ -591,7 +552,4 @@ class FacetData(GroupedData):
             The DataFrame corresponding to the cell at (row, col), or `None`
             if the cell is empty.
         """
-        if facet := self.facet(row, col):
-            return facet.data
-
-        return None
+        return self.facet(row, col).data
