@@ -1,45 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast
+from typing import TYPE_CHECKING, Any, Concatenate, Literal, Self, cast
 
 import matplotlib.pyplot as plt
 
 from .data import FacetData
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
     import polars as pl
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
     from .data import Facet
-
-
-class Plottable[T](Protocol):
-    """A protocol for a callable that can be plotted on a matplotlib Axes.
-
-    This defines the expected signature for plotting functions that can be passed
-    to methods like `FacetGrid.map_facet`.
-    """
-
-    def __call__(
-        self,
-        arg: T,
-        /,
-        *args: Any,
-        ax: Axes,
-        **kwargs: Any,
-    ) -> Any:
-        """Define the signature for a plottable function.
-
-        Args:
-            arg: The primary data argument (e.g., a DataFrame or a Facet).
-            *args: Additional positional arguments.
-            ax: The matplotlib Axes object to plot on.
-            **kwargs: Additional keyword arguments for the plotting function.
-        """
-        ...
 
 
 class FacetGrid:
@@ -107,8 +81,11 @@ class FacetGrid:
             **fig_kw,
         )
 
-        rcs = ((r, c) for r in range(self.nrows) for c in range(self.ncols))
-        self.axes = {rc: cast("Axes", axes[*rc]) for rc in rcs}
+        cells = self.facet_data.cells()
+        self.axes = {(c.row, c.col): cast("Axes", axes[c.row, c.col]) for c in cells}
+
+        # rcs = ((r, c) for r in range(self.nrows) for c in range(self.ncols))
+        # self.axes = {rc: cast("Axes", axes[*rc]) for rc in rcs}
 
     @property
     def nrows(self) -> int:
@@ -136,62 +113,73 @@ class FacetGrid:
         ax = self.axes.get((row, col))
         return ax if ax in self.figure.axes else None
 
-    @property
-    def left_axes(self) -> list[Axes]:
-        """Get a list of the axes in the leftmost column of the grid."""
-        return [a for row in range(self.nrows) if (a := self.get_axes(row, 0))]
+    def select_axes(
+        self,
+        *,
+        row: int | None = None,
+        col: int | None = None,
+        has_data: bool | None = None,
+        is_left: bool | None = None,
+        is_top: bool | None = None,
+        is_right: bool | None = None,
+        is_bottom: bool | None = None,
+        is_leftmost: bool | None = None,
+        is_topmost: bool | None = None,
+        is_rightmost: bool | None = None,
+        is_bottommost: bool | None = None,
+    ) -> list[Axes]:
+        """Selects a subset of `Axes` objects from the grid based on specified criteria.
 
-    @property
-    def top_axes(self) -> list[Axes]:
-        """Get a list of the axes in the top row of the grid."""
-        return [a for col in range(self.ncols) if (a := self.get_axes(0, col))]
+        This method allows for flexible filtering of the grid's `Axes` objects
+        by their properties, such as whether they contain data, their absolute
+        position in the grid, or their relative position (e.g., leftmost, topmost).
 
-    @property
-    def right_axes(self) -> list[Axes]:
-        """Get a list of the axes in the rightmost column of the grid."""
-        col = self.ncols - 1
-        return [a for row in range(self.nrows) if (a := self.get_axes(row, col))]
+        Args:
+            row: If specified, select only axes in this absolute row index.
+            col: If specified, select only axes in this absolute column index.
+            has_data: If True, select only axes with associated data.
+                If False, select only axes without associated data (empty cells).
+                If None, do not filter by data presence.
+            is_left: If True, select only axes that are in the leftmost column.
+                If False, select axes not in the leftmost column.
+                If None, do not filter by this property.
+            is_top: If True, select only axes that are in the topmost row.
+                If False, select axes not in the topmost row.
+                If None, do not filter by this property.
+            is_right: If True, select only axes that are in the rightmost column.
+                If False, select axes not in the rightmost column.
+                If None, do not filter by this property.
+            is_bottom: If True, select only axes that are in the bottommost row.
+                If False, select axes not in the bottommost row.
+                If None, do not filter by this property.
+            is_leftmost: If True, select only axes that are the leftmost
+                occupied cell in their row. If False, select axes that are
+                not the leftmost occupied cell in their row. If None, do not
+                filter by this property.
+            is_topmost: Similar to `is_leftmost`, but for the topmost
+                occupied cell in its column.
+            is_rightmost: Similar to `is_leftmost`, but for the rightmost
+                occupied cell in its row.
+            is_bottommost: Similar to `is_leftmost`, but for the bottommost
+                occupied cell in its column.
 
-    @property
-    def bottom_axes(self) -> list[Axes]:
-        """Get a list of the axes in the bottom row of the grid."""
-        row = self.nrows - 1
-        return [a for col in range(self.ncols) if (a := self.get_axes(row, col))]
+        Returns:
+            A list of `Axes` objects that match all specified criteria.
+        """
 
-    @property
-    def data_axes(self) -> list[Axes]:
-        """Get a list of axes that have corresponding data."""
-        cells = self.facet_data.cells().filter(has_data=True)
-        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
-
-    @property
-    def empty_axes(self) -> list[Axes]:
-        """Get a list of axes that do not have corresponding data."""
-        cells = self.facet_data.cells().filter(has_data=False)
-        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
-
-    @property
-    def leftmost_axes(self) -> list[Axes]:
-        """Get a list of the leftmost axes that contain data in each row."""
-        cells = self.facet_data.cells().filter(is_leftmost=True)
-        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
-
-    @property
-    def topmost_axes(self) -> list[Axes]:
-        """Get a list of the topmost axes that contain data in each column."""
-        cells = self.facet_data.cells().filter(is_topmost=True)
-        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
-
-    @property
-    def rightmost_axes(self) -> list[Axes]:
-        """Get a list of the rightmost axes that contain data in each row."""
-        cells = self.facet_data.cells().filter(is_rightmost=True)
-        return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
-
-    @property
-    def bottommost_axes(self) -> list[Axes]:
-        """Get a list of the bottommost axes that contain data in each column."""
-        cells = self.facet_data.cells().filter(is_bottommost=True)
+        cells = self.facet_data.cells().filter(
+            row=row,
+            col=col,
+            has_data=has_data,
+            is_left=is_left,
+            is_top=is_top,
+            is_right=is_right,
+            is_bottom=is_bottom,
+            is_leftmost=is_leftmost,
+            is_topmost=is_topmost,
+            is_rightmost=is_rightmost,
+            is_bottommost=is_bottommost,
+        )
         return [a for cell in cells if (a := self.get_axes(cell.row, cell.col))]
 
     def delaxes(self) -> Self:
@@ -203,13 +191,13 @@ class FacetGrid:
         Returns:
             The `FacetGrid` instance for method chaining.
         """
-        for ax in self.empty_axes:
+        for ax in self.select_axes(has_data=False):
             self.figure.delaxes(ax)
         return self
 
     def __iter__(self) -> Iterator[Axes]:
         """Iterate over the axes that have data."""
-        yield from self.data_axes
+        yield from self.select_axes(has_data=True)
 
     def items(self) -> Iterator[tuple[Axes, Facet]]:
         """Iterate over pairs of (`Axes`, `Facet`) for facets with data.
@@ -224,19 +212,19 @@ class FacetGrid:
             if ax := self.get_axes(facet.row, facet.col):
                 yield ax, facet
 
-    def map_facet(
+    def map_facet[**P](
         self,
-        func: Plottable[Facet],
+        func: Callable[Concatenate[Facet, P], Any],
         /,
-        *args: Any,
-        **kwargs: Any,
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> Self:
         """Apply a plotting function to each facet.
 
         The function is called with the `Facet` object as the first argument.
 
         Args:
-            func: A callable that accepts a `Facet` and a matplotlib `Axes`.
+            func: A callable that accepts a `Facet` as the first argument.
             *args: Additional positional arguments to pass to `func`.
             **kwargs: Additional keyword arguments to pass to `func`.
 
@@ -244,16 +232,17 @@ class FacetGrid:
             The `FacetGrid` instance for method chaining.
         """
         for ax, facet in self.items():
-            func(facet, *args, ax=ax, **kwargs)
+            plt.sca(ax)
+            func(facet, *args, **kwargs)
 
         return self
 
-    def map_dataframe(
+    def map_dataframe[**P](
         self,
-        func: Plottable[pl.DataFrame],
+        func: Callable[Concatenate[pl.DataFrame, P], Any],
         /,
-        *args: Any,
-        **kwargs: Any,
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> Self:
         """Apply a plotting function to each facet's DataFrame.
 
@@ -261,8 +250,8 @@ class FacetGrid:
         facet as the first argument.
 
         Args:
-            func: A callable that accepts a `polars.DataFrame` and a
-                matplotlib `Axes`.
+            func: A callable that accepts a `polars.DataFrame` as the
+                first argument.
             *args: Additional positional arguments to pass to `func`.
             **kwargs: Additional keyword arguments to pass to `func`.
 
@@ -270,7 +259,8 @@ class FacetGrid:
             The `FacetGrid` instance for method chaining.
         """
         for ax, facet in self.items():
-            func(facet.data, *args, ax=ax, **kwargs)
+            plt.sca(ax)
+            func(facet.data, *args, **kwargs)
 
         return self
 

@@ -176,7 +176,7 @@ def test_facet_data_empty() -> None:
     assert result.get_labels() == []
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def facet_data(data: pl.DataFrame) -> FacetData:
     return FacetData(data, row="a", col="b")
 
@@ -298,84 +298,79 @@ def test_facet_get(facet_data: FacetData) -> None:
     assert facet_data.get(0, 2) is None
 
 
+def test_cell_itere(facet_data: FacetData) -> None:
+    r, c = facet_data.cell(0, 0)
+    assert r == 0
+    assert c == 0
+
+
 @pytest.mark.parametrize(
-    ("row", "col", "expected"),
+    ("name", "row", "col", "expected"),
     [
-        (0, 0, True),
-        (0, 1, False),
-        (0, 2, False),
-        (1, 0, False),
-        (1, 1, True),
-        (1, 2, False),
+        ("has_data", 0, 0, True),
+        ("has_data", 0, 1, True),
+        ("has_data", 0, 2, False),
+        ("has_data", 1, 0, False),
+        ("has_data", 1, 1, True),
+        ("has_data", 1, 2, True),
+        ("is_left", 0, 0, True),
+        ("is_left", 0, 1, False),
+        ("is_left", 0, 2, False),
+        ("is_left", 1, 0, True),
+        ("is_left", 1, 1, False),
+        ("is_left", 1, 2, False),
+        ("is_top", 0, 0, True),
+        ("is_top", 0, 1, True),
+        ("is_top", 0, 2, True),
+        ("is_top", 1, 0, False),
+        ("is_top", 1, 1, False),
+        ("is_top", 1, 2, False),
+        ("is_right", 0, 0, False),
+        ("is_right", 0, 1, False),
+        ("is_right", 0, 2, True),
+        ("is_right", 1, 0, False),
+        ("is_right", 1, 1, False),
+        ("is_right", 1, 2, True),
+        ("is_bottom", 0, 0, False),
+        ("is_bottom", 0, 1, False),
+        ("is_bottom", 0, 2, False),
+        ("is_bottom", 1, 0, True),
+        ("is_bottom", 1, 1, True),
+        ("is_bottom", 1, 2, True),
+        ("is_leftmost", 0, 0, True),
+        ("is_leftmost", 0, 1, False),
+        ("is_leftmost", 0, 2, False),
+        ("is_leftmost", 1, 0, False),
+        ("is_leftmost", 1, 1, True),
+        ("is_leftmost", 1, 2, False),
+        ("is_topmost", 0, 0, True),
+        ("is_topmost", 0, 1, True),
+        ("is_topmost", 0, 2, False),
+        ("is_topmost", 1, 0, False),
+        ("is_topmost", 1, 1, False),
+        ("is_topmost", 1, 2, True),
+        ("is_rightmost", 0, 0, False),
+        ("is_rightmost", 0, 1, True),
+        ("is_rightmost", 0, 2, False),
+        ("is_rightmost", 1, 0, False),
+        ("is_rightmost", 1, 1, False),
+        ("is_rightmost", 1, 2, True),
+        ("is_bottommost", 0, 0, True),
+        ("is_bottommost", 0, 1, False),
+        ("is_bottommost", 0, 2, False),
+        ("is_bottommost", 1, 0, False),
+        ("is_bottommost", 1, 1, True),
+        ("is_bottommost", 1, 2, True),
     ],
 )
-def test_facet_is_leftmost(
+def test_cell_attribute(
     facet_data: FacetData,
+    name: str,
     row: int,
     col: int,
     expected: bool,
 ) -> None:
-    assert facet_data.cell(row, col).is_leftmost is expected
-
-
-@pytest.mark.parametrize(
-    ("row", "col", "expected"),
-    [
-        (0, 0, True),
-        (0, 1, True),
-        (0, 2, False),
-        (1, 0, False),
-        (1, 1, False),
-        (1, 2, True),
-    ],
-)
-def test_facet_is_topmost(
-    facet_data: FacetData,
-    row: int,
-    col: int,
-    expected: bool,
-) -> None:
-    assert facet_data.cell(row, col).is_topmost is expected
-
-
-@pytest.mark.parametrize(
-    ("row", "col", "expected"),
-    [
-        (0, 0, False),
-        (0, 1, True),
-        (0, 2, False),
-        (1, 0, False),
-        (1, 1, False),
-        (1, 2, True),
-    ],
-)
-def test_facet_is_rightmost(
-    facet_data: FacetData,
-    row: int,
-    col: int,
-    expected: bool,
-) -> None:
-    assert facet_data.cell(row, col).is_rightmost is expected
-
-
-@pytest.mark.parametrize(
-    ("row", "col", "expected"),
-    [
-        (0, 0, True),
-        (0, 1, False),
-        (0, 2, False),
-        (1, 0, False),
-        (1, 1, True),
-        (1, 2, True),
-    ],
-)
-def test_facet_is_bottommost(
-    facet_data: FacetData,
-    row: int,
-    col: int,
-    expected: bool,
-) -> None:
-    assert facet_data.cell(row, col).is_bottommost is expected
+    assert getattr(facet_data.cell(row, col), name) is expected
 
 
 def test_facets(facet_data: FacetData) -> None:
@@ -404,24 +399,158 @@ def test_facets(facet_data: FacetData) -> None:
     assert facet.is_bottommost
 
 
-def test_facets_leftmost(facet_data: FacetData) -> None:
-    facets = list(facet_data.facets().filter(is_leftmost=True))
-    assert len(facets) == 2
+def test_cells_filter_predicate(facet_data: FacetData) -> None:
+    cells = facet_data.cells().filter(lambda c: c.row == 0)
+    assert len(cells) == 3
+    assert all(c.row == 0 for c in cells)
 
 
-def test_facets_topmost(facet_data: FacetData) -> None:
-    facets = list(facet_data.facets().filter(is_topmost=True))
-    assert len(facets) == 3
+@pytest.mark.parametrize(
+    ("name", "value", "expected"),
+    [
+        ("row", 0, [(0, 0), (0, 1), (0, 2)]),
+        ("row", 1, [(1, 0), (1, 1), (1, 2)]),
+        ("row", 2, []),
+        ("col", 0, [(0, 0), (1, 0)]),
+        ("col", 1, [(0, 1), (1, 1)]),
+        ("col", 2, [(0, 2), (1, 2)]),
+    ],
+)
+def test_cells_filter_row_col(
+    facet_data: FacetData,
+    name: str,
+    value: int,
+    expected: list[tuple[int, int]],
+) -> None:
+    cells = facet_data.cells().filter(**{name: value})  # pyright: ignore[reportArgumentType]
+    result = [(c.row, c.col) for c in cells]
+    assert result == expected
 
 
-def test_facets_rightmost(facet_data: FacetData) -> None:
-    facets = list(facet_data.facets().filter(is_rightmost=True))
-    assert len(facets) == 2
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("has_data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
+        ("is_left", [(0, 0), (1, 0)]),
+        ("is_top", [(0, 0), (0, 1), (0, 2)]),
+        ("is_right", [(0, 2), (1, 2)]),
+        ("is_bottom", [(1, 0), (1, 1), (1, 2)]),
+        ("is_leftmost", [(0, 0), (1, 1)]),
+        ("is_topmost", [(0, 0), (0, 1), (1, 2)]),
+        ("is_rightmost", [(0, 1), (1, 2)]),
+        ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
+    ],
+)
+def test_cells_filter_true(
+    facet_data: FacetData,
+    name: str,
+    expected: list[tuple[int, int]],
+) -> None:
+    cells = facet_data.cells().filter(**{name: True})  # pyright: ignore[reportArgumentType]
+    result = [(c.row, c.col) for c in cells]
+    assert result == expected
 
 
-def test_facets_bottommost(facet_data: FacetData) -> None:
-    facets = list(facet_data.facets().filter(is_bottommost=True))
-    assert len(facets) == 3
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("has_data", [(0, 2), (1, 0)]),
+        ("is_left", [(0, 1), (0, 2), (1, 1), (1, 2)]),
+        ("is_top", [(1, 0), (1, 1), (1, 2)]),
+        ("is_right", [(0, 0), (0, 1), (1, 0), (1, 1)]),
+        ("is_bottom", [(0, 0), (0, 1), (0, 2)]),
+        ("is_leftmost", [(0, 1), (0, 2), (1, 0), (1, 2)]),
+        ("is_topmost", [(0, 2), (1, 0), (1, 1)]),
+        ("is_rightmost", [(0, 0), (0, 2), (1, 0), (1, 1)]),
+        ("is_bottommost", [(0, 1), (0, 2), (1, 0)]),
+    ],
+)
+def test_cells_filter_false(
+    facet_data: FacetData,
+    name: str,
+    expected: list[tuple[int, int]],
+) -> None:
+    cells = facet_data.cells().filter(**{name: False})  # pyright: ignore[reportArgumentType]
+    result = [(c.row, c.col) for c in cells]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "expected"),
+    [
+        ("row", 0, [(0, 0), (0, 1)]),
+        ("row", 1, [(1, 1), (1, 2)]),
+        ("row", 2, []),
+        ("col", 0, [(0, 0)]),
+        ("col", 1, [(0, 1), (1, 1)]),
+        ("col", 2, [(1, 2)]),
+    ],
+)
+def test_facets_filter_row_col(
+    facet_data: FacetData,
+    name: str,
+    value: int,
+    expected: list[tuple[int, int]],
+) -> None:
+    facets = facet_data.facets().filter(**{name: value})  # pyright: ignore[reportArgumentType]
+    result = [(f.row, f.col) for f in facets]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("is_left", [(0, 0)]),
+        ("is_top", [(0, 0), (0, 1)]),
+        ("is_right", [(1, 2)]),
+        ("is_bottom", [(1, 1), (1, 2)]),
+        ("is_leftmost", [(0, 0), (1, 1)]),
+        ("is_topmost", [(0, 0), (0, 1), (1, 2)]),
+        ("is_rightmost", [(0, 1), (1, 2)]),
+        ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
+    ],
+)
+def test_facets_filter_true(
+    facet_data: FacetData,
+    name: str,
+    expected: list[tuple[int, int]],
+) -> None:
+    kwargs = {name: True}
+    facets = facet_data.facets().filter(**kwargs)  # pyright: ignore[reportArgumentType]
+    result = [(f.row, f.col) for f in facets]
+    assert result == expected
+
+    cells = facet_data.cells().filter(has_data=True, **kwargs)  # pyright: ignore[reportArgumentType]
+    result = [(c.row, c.col) for c in cells]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("is_left", [(0, 1), (1, 1), (1, 2)]),
+        ("is_top", [(1, 1), (1, 2)]),
+        ("is_right", [(0, 0), (0, 1), (1, 1)]),
+        ("is_bottom", [(0, 0), (0, 1)]),
+        ("is_leftmost", [(0, 1), (1, 2)]),
+        ("is_topmost", [(1, 1)]),
+        ("is_rightmost", [(0, 0), (1, 1)]),
+        ("is_bottommost", [(0, 1)]),
+    ],
+)
+def test_facets_filter_false(
+    facet_data: FacetData,
+    name: str,
+    expected: list[tuple[int, int]],
+) -> None:
+    kwargs = {name: False}
+    facets = facet_data.facets().filter(**kwargs)  # pyright: ignore[reportArgumentType]
+    result = [(f.row, f.col) for f in facets]
+    assert result == expected
+
+    cells = facet_data.cells().filter(has_data=True, **kwargs)  # pyright: ignore[reportArgumentType]
+    result = [(c.row, c.col) for c in cells]
+    assert result == expected
 
 
 def test_iter(facet_data: FacetData) -> None:

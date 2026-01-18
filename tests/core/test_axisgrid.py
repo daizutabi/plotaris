@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import matplotlib.pyplot as plt
 import polars as pl
 import pytest
 
@@ -48,20 +49,19 @@ def test_axes(grid: FacetGrid) -> None:
 @pytest.mark.parametrize(
     ("name", "rcs"),
     [
-        ("left", [(0, 0), (1, 0)]),
-        ("top", [(0, 0), (0, 1), (0, 2)]),
-        ("right", [(0, 2), (1, 2)]),
-        ("bottom", [(1, 0), (1, 1), (1, 2)]),
-        ("data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
-        ("empty", [(0, 2), (1, 0)]),
-        ("leftmost", [(0, 0), (1, 1)]),
-        ("topmost", [(0, 0), (0, 1), (1, 2)]),
-        ("rightmost", [(0, 1), (1, 2)]),
-        ("bottommost", [(0, 0), (1, 1), (1, 2)]),
+        ("has_data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
+        ("is_left", [(0, 0), (1, 0)]),
+        ("is_top", [(0, 0), (0, 1), (0, 2)]),
+        ("is_right", [(0, 2), (1, 2)]),
+        ("is_bottom", [(1, 0), (1, 1), (1, 2)]),
+        ("is_leftmost", [(0, 0), (1, 1)]),
+        ("is_topmost", [(0, 0), (0, 1), (1, 2)]),
+        ("is_rightmost", [(0, 1), (1, 2)]),
+        ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
     ],
 )
 def test_axes_property(grid: FacetGrid, name: str, rcs: list[tuple[int, int]]) -> None:
-    result = getattr(grid, f"{name}_axes")
+    result = grid.select_axes(**{name: True})
     expected = [grid.axes[rc] for rc in rcs]
     assert result == expected
 
@@ -74,16 +74,15 @@ def grid_delaxes(data: pl.DataFrame) -> FacetGrid:
 @pytest.mark.parametrize(
     ("name", "rcs"),
     [
-        ("left", [(0, 0)]),
-        ("top", [(0, 0), (0, 1)]),
-        ("right", [(1, 2)]),
-        ("bottom", [(1, 1), (1, 2)]),
-        ("data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
-        ("empty", []),
-        ("leftmost", [(0, 0), (1, 1)]),
-        ("topmost", [(0, 0), (0, 1), (1, 2)]),
-        ("rightmost", [(0, 1), (1, 2)]),
-        ("bottommost", [(0, 0), (1, 1), (1, 2)]),
+        ("has_data", [(0, 0), (0, 1), (1, 1), (1, 2)]),
+        ("is_left", [(0, 0)]),
+        ("is_top", [(0, 0), (0, 1)]),
+        ("is_right", [(1, 2)]),
+        ("is_bottom", [(1, 1), (1, 2)]),
+        ("is_leftmost", [(0, 0), (1, 1)]),
+        ("is_topmost", [(0, 0), (0, 1), (1, 2)]),
+        ("is_rightmost", [(0, 1), (1, 2)]),
+        ("is_bottommost", [(0, 0), (1, 1), (1, 2)]),
     ],
 )
 def test_axes_property_after_delaxes(
@@ -91,7 +90,7 @@ def test_axes_property_after_delaxes(
     name: str,
     rcs: list[tuple[int, int]],
 ) -> None:
-    result = getattr(grid_delaxes, f"{name}_axes")
+    result = grid_delaxes.select_axes(**{name: True})
     expected = [grid_delaxes.axes[rc] for rc in rcs]
     assert result == expected
 
@@ -112,12 +111,12 @@ def test_items(grid: FacetGrid) -> None:
 def test_map_facet(grid: FacetGrid) -> None:
     axes: list[Axes] = []
 
-    def func(facet: Facet, *, ax: Axes) -> None:  # pyright: ignore[reportUnusedParameter]
-        axes.append(ax)
+    def func(facet: Facet) -> None:  # pyright: ignore[reportUnusedParameter]
+        axes.append(plt.gca())
 
     grid.map_facet(func)
 
-    assert axes == grid.data_axes
+    assert axes == grid.select_axes(has_data=True)
 
 
 def test_map_dataframe(mocker: MockerFixture) -> None:
@@ -135,7 +134,8 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     assert (0, 0) in grid.axes
     assert (1, 0) in grid.axes
 
-    def plot(data: pl.DataFrame, ms: int, *, ax: Axes, color: str) -> None:
+    def plot(data: pl.DataFrame, ms: int, *, color: str) -> None:
+        ax = plt.gca()
         ax.scatter(data["x"], data["y"], ms=ms, color=color)  # pyright: ignore[reportUnknownMemberType]
 
     mock_scatter = mocker.patch("matplotlib.axes.Axes.scatter")

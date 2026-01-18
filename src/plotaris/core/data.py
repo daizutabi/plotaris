@@ -7,8 +7,8 @@ operation for creating faceted plots (small multiples).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from dataclasses import dataclass, fields
+from typing import TYPE_CHECKING, Any, Literal, Self, cast, overload
 
 import polars as pl
 
@@ -299,6 +299,14 @@ class Cell:
     """The column index of the facet cell."""
     has_data: bool
     """True if the cell has associated data."""
+    is_left: bool
+    """True if the cell is in the leftmost column (col = 0) of the grid."""
+    is_top: bool
+    """True if the cell is in the topmost row (row = 0) of the grid."""
+    is_right: bool
+    """True if the cell is in the rightmost column of the grid."""
+    is_bottom: bool
+    """True if the cell is in the bottommost row of the grid."""
     is_leftmost: bool
     """True if the cell is the leftmost occupied cell in its row."""
     is_topmost: bool
@@ -328,6 +336,17 @@ class Facet(Cell):
     """The label for the row dimension."""
     col_label: dict[str, Any]
     """The label for the column dimension."""
+
+    @classmethod
+    def from_cell(
+        cls,
+        cell: Cell,
+        data: pl.DataFrame,
+        row_label: dict[str, Any],
+        col_label: dict[str, Any],
+    ) -> Self:
+        kwargs = {f.name: getattr(cell, f.name) for f in fields(cell)}
+        return cls(**kwargs, data=data, row_label=row_label, col_label=col_label)
 
 
 class Collection[T: Cell]:
@@ -359,7 +378,13 @@ class Collection[T: Cell]:
         self,
         predicate: Callable[[T], bool] | None = None,
         *,
+        row: int | None = None,
+        col: int | None = None,
         has_data: bool | None = None,
+        is_left: bool | None = None,
+        is_top: bool | None = None,
+        is_right: bool | None = None,
+        is_bottom: bool | None = None,
         is_leftmost: bool | None = None,
         is_topmost: bool | None = None,
         is_rightmost: bool | None = None,
@@ -369,7 +394,13 @@ class Collection[T: Cell]:
 
         Args:
             predicate: A callable that returns True for items to be included.
+            row: If specified, select only axes in this absolute row index.
+            col: If specified, select only axes in this absolute column index.
             has_data: Filter by the `has_data` attribute.
+            is_left: Filter by the `is_left` attribute.
+            is_top: Filter by the `is_top` attribute.
+            is_right: Filter by the `is_right` attribute.
+            is_bottom: Filter by the `is_bottom` attribute.
             is_leftmost: Filter by the `is_leftmost` attribute.
             is_topmost: Filter by the `is_topmost` attribute.
             is_rightmost: Filter by the `is_rightmost` attribute.
@@ -381,8 +412,20 @@ class Collection[T: Cell]:
         items = iter(self.items)
         if predicate:
             items = (item for item in items if predicate(item))
+        if row is not None:
+            items = (item for item in items if item.row == row)
+        if col is not None:
+            items = (item for item in items if item.col == col)
         if has_data is not None:
             items = (item for item in items if item.has_data is has_data)
+        if is_left is not None:
+            items = (item for item in items if item.is_left is is_left)
+        if is_top is not None:
+            items = (item for item in items if item.is_top is is_top)
+        if is_right is not None:
+            items = (item for item in items if item.is_right is is_right)
+        if is_bottom is not None:
+            items = (item for item in items if item.is_bottom is is_bottom)
         if is_leftmost is not None:
             items = (item for item in items if item.is_leftmost is is_leftmost)
         if is_topmost is not None:
@@ -477,6 +520,10 @@ class FacetData(GroupedData):
             row,
             col,
             has_data=(row, col) in self._lookup,
+            is_left=(col == 0),
+            is_top=(row == 0),
+            is_right=(col == self.ncols - 1),
+            is_bottom=(row == self.nrows - 1),
             is_leftmost=self._min_col_for_row.get(row) == col,
             is_topmost=self._min_row_for_col.get(col) == row,
             is_rightmost=self._max_col_for_row.get(row) == col,
@@ -513,14 +560,8 @@ class FacetData(GroupedData):
         index = self._lookup[row, col]
         labels = self.get_label(index, named=True)
 
-        return Facet(
-            row=cell.row,
-            col=cell.col,
-            has_data=cell.has_data,
-            is_leftmost=cell.is_leftmost,
-            is_topmost=cell.is_topmost,
-            is_rightmost=cell.is_rightmost,
-            is_bottommost=cell.is_bottommost,
+        return Facet.from_cell(
+            cell,
             data=self.data[index],
             row_label=labels["row"],
             col_label=labels["col"],
