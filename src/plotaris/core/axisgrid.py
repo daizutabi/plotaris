@@ -128,6 +128,12 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
 
         return self
 
+    def set(self, **kwargs: Any) -> Self:
+        for facet_axes in self:
+            facet_axes.axes.set(**kwargs)
+
+        return self
+
     def _display_(self) -> Figure | SubFigure | None:
         """Return the figure for display in IPython environments."""
         if axes := self.axes:
@@ -243,10 +249,6 @@ class FacetGrid:
         self.facet_axes = FacetAxesCollection(f for f in self.facet_axes if f.has_data)
         return self
 
-    def _display_(self) -> Figure:
-        """Return the figure for display in IPython environments."""
-        return self.figure
-
     def filter(
         self,
         predicate: Callable[[FacetAxes], bool] | None = None,
@@ -348,3 +350,11 @@ class FacetGrid:
         """
         self.facet_axes.map_dataframe(func, *args, **kwargs)
         return self
+
+    def set(self, **kwargs: Any) -> Self:
+        self.facet_axes.set(**kwargs)
+        return self
+
+    def _display_(self) -> Figure:
+        """Return the figure for display in IPython environments."""
+        return self.figure
