@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import polars as pl
@@ -44,6 +44,14 @@ def test_axes(grid: FacetGrid) -> None:
     assert (1, 0) in grid.facet_axes
     assert (1, 1) in grid.facet_axes
     assert (1, 2) in grid.facet_axes
+
+
+def test_get_axes(grid: FacetGrid) -> None:
+    assert grid.facet_axes.get_axes(0, 0) is grid._axes[0, 0]  # pyright: ignore[reportPrivateUsage]
+
+
+def test_get_axes_none(grid: FacetGrid) -> None:
+    assert grid.facet_axes.get_axes(10, 10) is None
 
 
 @pytest.mark.parametrize(
@@ -99,9 +107,18 @@ def test_axes_property_after_delaxes(
     assert result == expected
 
 
-def test_facet_axes_display(grid: FacetGrid) -> None:
-    assert grid.facet_axes._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
-    assert grid.facet_axes.filter(row=10)._display_() is None  # pyright: ignore[reportPrivateUsage]
+@pytest.mark.parametrize(
+    ("kwargs", "n"),
+    [
+        ({"has_data": True}, 4),
+        ({"is_topmost": True}, 3),
+        ({"is_topmost": True, "row": 0}, 2),
+        ({"is_topmost": True, "row": 1}, 1),
+    ],
+)
+def test_select(data: pl.DataFrame, kwargs: dict[str, Any], n: int) -> None:
+    grid = FacetGrid(data, row="a", col="b")
+    assert len(grid.select(**kwargs).axes) == n
 
 
 def test_map(grid: FacetGrid) -> None:
@@ -110,9 +127,23 @@ def test_map(grid: FacetGrid) -> None:
     def func(facet_axes: FacetAxes) -> None:  # pyright: ignore[reportUnusedParameter]
         axes.append(plt.gca())
 
-    grid.facet_axes.map(func)
+    grid.map(func)
 
     assert axes == grid.axes
+
+
+def test_map_axes(grid: FacetGrid) -> None:
+    axes: list[Axes] = []
+
+    def func(ax: Axes, x: int, *, y: int) -> None:
+        axes.append(ax)
+        assert x == 1
+        assert y == 2
+
+    grid.map_axes(func, 1, y=2)
+
+    assert axes[0] == grid.facet_axes[0, 0]
+    assert axes[-1] == grid.facet_axes[1, 2]
 
 
 def test_map_dataframe(mocker: MockerFixture) -> None:
@@ -135,7 +166,7 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
         ax.scatter(data["x"], data["y"], ms=ms, color=color)  # pyright: ignore[reportUnknownMemberType]
 
     mock_scatter = mocker.patch("matplotlib.axes.Axes.scatter")
-    grid.facet_axes.map_dataframe(plot, 5, color="red")
+    grid.map_dataframe(plot, 5, color="red")
 
     assert mock_scatter.call_count == 2
     calls = mock_scatter.call_args_list
@@ -157,5 +188,18 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     assert kwargs["color"] == "red"
 
 
-def test_facet_grid_display(grid: FacetGrid) -> None:
+def test_set(grid: FacetGrid, mocker: MockerFixture) -> None:
+    mock_set = mocker.patch("matplotlib.axes.Axes.set")
+    grid.set(x=1, y=2)
+    assert mock_set.call_count == 6
+    calls = mock_set.call_args_list
+    _, kwargs = calls[0]
+    assert kwargs["x"] == 1
+    assert kwargs["y"] == 2
+
+
+def test_display(grid: FacetGrid) -> None:
     assert grid._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
+    assert grid.facet_axes._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
+    assert next(iter(grid.facet_axes))._display_() is grid._axes[0, 0]  # pyright: ignore[reportPrivateUsage]
+    assert grid.facet_axes.filter(row=10)._display_() is None  # pyright: ignore[reportPrivateUsage]
