@@ -53,7 +53,8 @@ class Encoding:
         palettes: dict[str, Palette] = {}
 
         for name, columns in self.items():
-            palettes[name] = create_palette(data, columns, *palette_default[name])
+            palette, default = palette_default[name]
+            palettes[name] = create_palette(data, columns, palette, default)
 
         return palettes
 
@@ -85,6 +86,6 @@ def create_palette[T](
 
     if isinstance(palette, Mapping):
         defaults = cycle(default)
-        return {row: palette.get(row, next(defaults)) for row in rows}
+        return {row: palette.get(row, next(defaults)) for row in rows}  # ty: ignore[no-matching-overload]
 
     return dict(zip(rows, cycle(palette or default)))

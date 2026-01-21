@@ -73,7 +73,7 @@ def test_facet_axes_filter(
     name: str,
     rcs: list[tuple[int, int]],
 ) -> None:
-    result = grid.facet_axes.filter(**{name: True}).axes  # pyright: ignore[reportArgumentType]
+    result = grid.facet_axes.filter(predicate=None, **{name: True}).axes
     expected = [grid.facet_axes[rc] for rc in rcs]
     assert result == expected
 
@@ -102,7 +102,7 @@ def test_axes_property_after_delaxes(
     name: str,
     rcs: list[tuple[int, int]],
 ) -> None:
-    result = grid_delaxes.facet_axes.filter(**{name: True}).axes  # pyright: ignore[reportArgumentType]
+    result = grid_delaxes.facet_axes.filter(predicate=None, **{name: True}).axes
     expected = [grid_delaxes.facet_axes[rc] for rc in rcs]
     assert result == expected
 

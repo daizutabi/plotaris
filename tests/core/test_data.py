@@ -422,7 +422,7 @@ def test_facets_filter_row_col(
     value: int,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(**{name: value})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(predicate=None, **{name: value})  # pyright: ignore[reportArgumentType] # ty: ignore[invalid-argument-type]
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
@@ -446,7 +446,7 @@ def test_facets_filter_true(
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(**{name: True})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(predicate=None, **{name: True})
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
@@ -470,7 +470,7 @@ def test_facets_filter_false(
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(**{name: False})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(predicate=None, **{name: False})
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
@@ -492,7 +492,7 @@ def test_facets_filter_row_col_has_data(
     value: int,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(has_data=True, **{name: value})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(has_data=True, **{name: value})  # pyright: ignore[reportArgumentType] # ty: ignore[invalid-argument-type]
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
@@ -515,7 +515,7 @@ def test_facets_filter_true_has_data(
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(has_data=True, **{name: True})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(has_data=True, **{name: True})  # pyright: ignore[reportArgumentType] # ty: ignore[invalid-argument-type]
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
@@ -538,7 +538,7 @@ def test_facets_filter_false_has_data(
     name: str,
     expected: list[tuple[int, int]],
 ) -> None:
-    facets = facet_data.facets().filter(has_data=True, **{name: False})  # pyright: ignore[reportArgumentType]
+    facets = facet_data.facets().filter(has_data=True, **{name: False})  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
     result = [(f.row, f.col) for f in facets]
     assert result == expected
 
