@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     import polars as pl
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
-    from numpy.typing import NDArray
 
 
 @dataclass(frozen=True)
@@ -144,14 +143,12 @@ class FacetGrid:
     """The input DataFrame."""
     facet_data: FacetData
     """An instance of `FacetData` that manages the data partitioning for the grid."""
-    facet_axes: FacetAxesCollection
-    """A `FacetAxesCollection` containing all facet-axes pairs in the grid.
-
-    This is the main object used for filtering and mapping.
-    """
+    _facet_axes: FacetAxesCollection
+    """A `FacetAxesCollection` containing all facet-axes pairs in the grid."""
+    _selected_facet_axes: FacetAxesCollection | None
+    """A selected `FacetAxesCollection`."""
     figure: Figure
     """The main matplotlib `Figure` object."""
-    _axes: NDArray[Any]
 
     def __init__(
         self,
@@ -188,8 +185,9 @@ class FacetGrid:
         """
         self.data = data
         self.facet_data = FacetData(data, row, col, wrap)
+        self._selected_facet_axes = None
 
-        self.figure, self._axes = plt.subplots(  # pyright: ignore[reportUnknownMemberType]
+        self.figure, axes = plt.subplots(  # pyright: ignore[reportUnknownMemberType]
             self.nrows,
             self.ncols,
             squeeze=False,
@@ -201,13 +199,9 @@ class FacetGrid:
             **fig_kw,
         )
 
-        self.set_facet_axes()
-
-    def set_facet_axes(self) -> Self:
         facets = self.facet_data.facets()
-        facet_axes = (FacetAxes.from_facet(f, self._axes[f.row, f.col]) for f in facets)
-        self.facet_axes = FacetAxesCollection(facet_axes)
-        return self
+        facet_axes = (FacetAxes.from_facet(f, axes[f.row, f.col]) for f in facets)
+        self._facet_axes = FacetAxesCollection(facet_axes)
 
     @property
     def nrows(self) -> int:
@@ -218,6 +212,10 @@ class FacetGrid:
     def ncols(self) -> int:
         """Get the number of columns in the facet grid."""
         return self.facet_data.ncols
+
+    @property
+    def facet_axes(self) -> FacetAxesCollection:
+        return self._selected_facet_axes or self._facet_axes
 
     @property
     def axes(self) -> list[Axes]:
@@ -233,10 +231,10 @@ class FacetGrid:
         Returns:
             The `FacetGrid` instance for method chaining.
         """
-        for ax in self.facet_axes.filter(has_data=False).axes:
+        for ax in self._facet_axes.filter(has_data=False).axes:
             self.figure.delaxes(ax)
 
-        self.facet_axes = FacetAxesCollection(f for f in self.facet_axes if f.has_data)
+        self._facet_axes = FacetAxesCollection(f for f in self.facet_axes if f.has_data)
         return self
 
     def select(
@@ -255,8 +253,30 @@ class FacetGrid:
         is_rightmost: bool | None = None,
         is_bottommost: bool | None = None,
     ) -> Self:
-        self.set_facet_axes()
-        self.facet_axes = self.facet_axes.filter(
+        """Select a subset of facets from the grid.
+
+        Note:
+            Calling this method will reset any prior selection.
+
+        Args:
+            predicate: A callable that takes a `FacetAxes` object and returns
+                `True` if it should be included in the selection.
+            row: The row index to select.
+            col: The column index to select.
+            has_data: If `True`, select only facets that have associated data.
+            is_left: If `True`, select facets in the first column.
+            is_top: If `True`, select facets in the first row.
+            is_right: If `True`, select facets in the last column.
+            is_bottom: If `True`, select facets in the last row.
+            is_leftmost: If `True`, select the first visible facet in each row.
+            is_topmost: If `True`, select the first visible facet in each column.
+            is_rightmost: If `True`, select the last visible facet in each row.
+            is_bottommost: If `True`, select the last visible facet in each column.
+
+        Returns:
+            The `FacetGrid` instance for method chaining.
+        """
+        self._selected_facet_axes = self._facet_axes.filter(
             predicate=predicate,
             row=row,
             col=col,
@@ -270,6 +290,11 @@ class FacetGrid:
             is_rightmost=is_rightmost,
             is_bottommost=is_bottommost,
         )
+        return self
+
+    def all(self) -> Self:
+        """Clear any active facet selection, returning to the full set of facets."""
+        self._selected_facet_axes = None
         return self
 
     def map[**P](
@@ -344,6 +369,73 @@ class FacetGrid:
     def set(self, **kwargs: Any) -> Self:
         self.facet_axes.set(**kwargs)
         return self
+
+    # def set_titles(
+    #     self,
+    #     template: str | None = None,
+    #     **kwargs: Any,
+    # ) -> Self:
+    #     """Set the titles for each subplot.
+
+    #     Args:
+    #         template: A format string for the titles. Variables from the
+    #             facet's row and column values can be used. If not provided,
+    #             a default template is generated.
+    #         **kwargs: Additional keyword arguments passed to `ax.set_title`.
+
+    #     Returns:
+    #         The `FacetGrid` instance for method chaining.
+    #     """
+    #     if template is None:
+    #         parts = []
+    #         if self.facet_data.row_names:
+    #             row_template = " | ".join(
+    #                 f"{name}={{{name}}}" for name in self.facet_data.row_names
+    #             )
+    #             parts.append(row_template)
+    #         if self.facet_data.col_names:
+    #             col_template = " | ".join(
+    #                 f"{name}={{{name}}}" for name in self.facet_data.col_names
+    #             )
+    #             parts.append(col_template)
+    #         template = " | ".join(parts)
+
+    #     if not template:
+    #         return self
+
+    #     for f in self.facet_axes:
+    #         if not f.has_data:
+    #             continue
+    #         title_data = {**f.row_vals, **f.col_vals}
+    #         title = template.format(**title_data)
+    #         f.axes.set_title(title, **kwargs)
+
+    #     return self
+
+    # def set_axis_labels(
+    #     self,
+    #     xlabel: str | None = None,
+    #     ylabel: str | None = None,
+    #     **kwargs: Any,
+    # ) -> Self:
+    #     """Set the labels for the x and y axes for the entire figure.
+
+    #     Args:
+    #         xlabel: The label for the x-axis.
+    #         ylabel: The label for the y-axis.
+    #         **kwargs: Additional keyword arguments passed to `fig.supxlabel`
+    #             and `fig.supylabel`.
+
+    #     Returns:
+    #         The `FacetGrid` instance for method chaining.
+    #     """
+    #     if xlabel is not None:
+    #         self.figure.supxlabel(xlabel, **kwargs)
+    #     if ylabel is not None:
+    #         self.figure.supylabel(ylabel, **kwargs)
+    #     return self
+
+    #     return self
 
     def _display_(self) -> Figure:
         """Return the figure for display in IPython environments."""

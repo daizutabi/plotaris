@@ -47,7 +47,7 @@ def test_axes(grid: FacetGrid) -> None:
 
 
 def test_get_axes(grid: FacetGrid) -> None:
-    assert grid.facet_axes.get_axes(0, 0) is grid._axes[0, 0]  # pyright: ignore[reportPrivateUsage]
+    assert grid.facet_axes.get_axes(0, 0) is grid.figure.axes[0]
 
 
 def test_get_axes_none(grid: FacetGrid) -> None:
@@ -119,6 +119,15 @@ def test_axes_property_after_delaxes(
 def test_select(data: pl.DataFrame, kwargs: dict[str, Any], n: int) -> None:
     grid = FacetGrid(data, row="a", col="b")
     assert len(grid.select(**kwargs).axes) == n
+
+
+def test_all(data: pl.DataFrame) -> None:
+    grid = FacetGrid(data, row="a", col="b")
+    assert len(grid.axes) == 6
+    grid.select(has_data=True)
+    assert len(grid.axes) == 4
+    grid.all()
+    assert len(grid.axes) == 6
 
 
 def test_map(grid: FacetGrid) -> None:
