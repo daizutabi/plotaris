@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     import polars as pl
     from matplotlib.axes import Axes
-    from matplotlib.figure import Figure, SubFigure
+    from matplotlib.figure import Figure
     from numpy.typing import NDArray
 
 
@@ -31,10 +31,6 @@ class FacetAxes(Facet):
     ) -> Self:
         kwargs = {f.name: getattr(facet, f.name) for f in fields(facet)}
         return cls(**kwargs, axes=axes)
-
-    def _display_(self) -> Axes:
-        """Return the axes for display in IPython environments."""
-        return self.axes
 
 
 class FacetAxesCollection(FacetCollection[FacetAxes]):
@@ -133,12 +129,6 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
             axes.set(**kwargs)
 
         return self
-
-    def _display_(self) -> Figure | SubFigure | None:
-        """Return the figure for display in IPython environments."""
-        if axes := self.axes:
-            return axes[0].figure
-        return None
 
 
 class FacetGrid:

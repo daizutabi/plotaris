@@ -200,6 +200,3 @@ def test_set(grid: FacetGrid, mocker: MockerFixture) -> None:
 
 def test_display(grid: FacetGrid) -> None:
     assert grid._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
-    assert grid.facet_axes._display_() is grid.figure  # pyright: ignore[reportPrivateUsage]
-    assert next(iter(grid.facet_axes))._display_() is grid._axes[0, 0]  # pyright: ignore[reportPrivateUsage]
-    assert grid.facet_axes.filter(row=10)._display_() is None  # pyright: ignore[reportPrivateUsage]

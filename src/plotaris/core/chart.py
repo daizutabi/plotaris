@@ -22,19 +22,16 @@ class Chart:
     data: pl.DataFrame
     encoding: Encoding
     mark: Mark | None
-    # facet_spec: FacetSpec | None
 
     def __init__(
         self,
         data: pl.DataFrame,
         encoding: Encoding | None = None,
         mark: Mark | None = None,
-        # facet_spec: FacetSpec | None = None,
     ) -> None:
         self.data = data
         self.encoding = encoding or Encoding()
         self.mark = mark
-        # self.facet_spec = facet_spec
 
     def encode(
         self,
