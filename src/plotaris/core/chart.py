@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Self
 
 from plotaris.marks.bar import BarMark
@@ -18,10 +18,18 @@ if TYPE_CHECKING:
     from plotaris.marks.base import Mark
 
 
+@dataclass(frozen=True)
+class FacetSpec:
+    row: tuple[str, ...] | None = None
+    col: tuple[str, ...] | None = None
+    wrap: int | None = None
+
+
 class Chart:
     data: pl.DataFrame
     encoding: Encoding
     mark: Mark | None
+    facet_spec: FacetSpec | None
 
     def __init__(
         self,
@@ -32,6 +40,7 @@ class Chart:
         self.data = data
         self.encoding = encoding or Encoding()
         self.mark = mark
+        self.facet_spec = None
 
     def encode(
         self,
@@ -53,20 +62,20 @@ class Chart:
         self.encoding = replace(self.encoding, **changes)
         return self
 
-    # def facet(
-    #     self,
-    #     *,
-    #     row: str | Iterable[str] | None = None,
-    #     col: str | Iterable[str] | None = None,
-    #     wrap: int | None = None,
-    # ) -> Self:
-    #     """Create a facet grid of subplots."""
-    #     self.facet_spec = FacetSpec(
-    #         row=to_tuple(row) or None,
-    #         col=to_tuple(col) or None,
-    #         wrap=wrap,
-    #     )
-    #     return self
+    def facet(
+        self,
+        *,
+        row: str | Iterable[str] | None = None,
+        col: str | Iterable[str] | None = None,
+        wrap: int | None = None,
+    ) -> Self:
+        """Create a facet grid of subplots."""
+        self.facet_spec = FacetSpec(
+            row=to_tuple(row) or None,
+            col=to_tuple(col) or None,
+            wrap=wrap,
+        )
+        return self
 
     def mark_point(self, **kwargs: Any) -> Self:
         self.mark = PointMark(**kwargs)

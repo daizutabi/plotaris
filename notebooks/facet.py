@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.2"
+__generated_with = "0.19.5"
 app = marimo.App(width="full")
 
 
@@ -39,11 +39,6 @@ def _(data, plot, plts):
     grid = plts.FacetGrid(data, row="a", col="b", sharex=True).map_dataframe(plot)
     grid.map_axes(lambda ax: ax.set(xlabel="a"))
     grid
-    return
-
-
-@app.cell
-def _():
     return
 
 

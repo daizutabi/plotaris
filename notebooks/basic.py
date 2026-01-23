@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.5"
 app = marimo.App(width="full")
 
 
@@ -51,11 +51,6 @@ def _(EngFormatter):
 def _():
     from matplotlib import ticker
     ticker.__file__
-    return
-
-
-@app.cell
-def _():
     return
 
 

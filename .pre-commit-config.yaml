@@ -34,4 +34,12 @@ repos:
         name: ty check
         entry: uv run ty check
         language: python
-        files: \.py$
+        files: ^(src|tests)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: marimo
+        name: marimo
+        entry: uv run marimo check --fix --unsafe-fixes
+        language: python
+        files: ^notebooks/.*\.py$
