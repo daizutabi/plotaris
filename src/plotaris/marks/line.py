@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING, Any, override
 from plotaris.marks.base import Mark
 
 if TYPE_CHECKING:
-    import polars as pl
     from matplotlib.axes import Axes
 
 
 class LineMark(Mark):
     @override
-    def _plot(self, ax: Axes, *, x: pl.Series, y: pl.Series, **kwargs: Any) -> None:
-        ax.plot(x, y, **kwargs)  # pyright: ignore[reportUnknownMemberType]
+    def _plot(self, ax: Axes, *args: Any, **kwargs: Any) -> None:
+        ax.plot(*args, **kwargs)  # pyright: ignore[reportUnknownMemberType]

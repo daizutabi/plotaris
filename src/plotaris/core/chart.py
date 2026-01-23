@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Self
+
+import matplotlib.pyplot as plt
 
 from plotaris.marks.bar import BarMark
 from plotaris.marks.line import LineMark
@@ -14,33 +15,25 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     import polars as pl
+    from matplotlib.axes import Axes
 
     from plotaris.marks.base import Mark
 
 
-@dataclass(frozen=True)
-class FacetSpec:
-    row: tuple[str, ...] | None = None
-    col: tuple[str, ...] | None = None
-    wrap: int | None = None
-
-
 class Chart:
     data: pl.DataFrame
-    encoding: Encoding
-    mark: Mark | None
-    facet_spec: FacetSpec | None
+    x: str | pl.Expr | None = None
+    y: str | pl.Expr | None = None
+    color: tuple[str, ...] = ()
+    size: tuple[str, ...] = ()
+    shape: tuple[str, ...] = ()
+    row: tuple[str, ...] = ()
+    col: tuple[str, ...] = ()
+    wrap: int | None = None
+    mark: Mark | None = None
 
-    def __init__(
-        self,
-        data: pl.DataFrame,
-        encoding: Encoding | None = None,
-        mark: Mark | None = None,
-    ) -> None:
+    def __init__(self, data: pl.DataFrame) -> None:
         self.data = data
-        self.encoding = encoding or Encoding()
-        self.mark = mark
-        self.facet_spec = None
 
     def encode(
         self,
@@ -49,32 +42,35 @@ class Chart:
         color: str | Iterable[str] | None = None,
         size: str | Iterable[str] | None = None,
         shape: str | Iterable[str] | None = None,
-    ) -> Self:
-        """Map variables to visual properties, updating existing encodings."""
-        changes = {
-            "x": x,
-            "y": y,
-            "color": to_tuple(color) or None,
-            "size": to_tuple(size) or None,
-            "shape": to_tuple(shape) or None,
-        }
-        changes = {k: v for k, v in changes.items() if v is not None}
-        self.encoding = replace(self.encoding, **changes)
-        return self
-
-    def facet(
-        self,
-        *,
         row: str | Iterable[str] | None = None,
         col: str | Iterable[str] | None = None,
         wrap: int | None = None,
     ) -> Self:
-        """Create a facet grid of subplots."""
-        self.facet_spec = FacetSpec(
-            row=to_tuple(row) or None,
-            col=to_tuple(col) or None,
-            wrap=wrap,
-        )
+        if x is not None:
+            self.x = x
+        if y is not None:
+            self.x = y
+        if color is not None:
+            self.color = to_tuple(color)
+        if size is not None:
+            self.size = to_tuple(size)
+        if shape is not None:
+            self.shape = to_tuple(shape)
+
+        if row or col:
+            self.facet(row, col, wrap)
+
+        return self
+
+    def facet(
+        self,
+        row: str | Iterable[str] | None = None,
+        col: str | Iterable[str] | None = None,
+        wrap: int | None = None,
+    ) -> Self:
+        self.row = to_tuple(row)
+        self.col = to_tuple(col)
+        self.wrap = wrap
         return self
 
     def mark_point(self, **kwargs: Any) -> Self:
@@ -89,7 +85,29 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    # def display(self, ax: Axes | None = None) -> Axes | np.ndarray[Any, Any]:
+    @property
+    def encoding(self) -> Encoding:
+        return Encoding(self.color, self.size, self.shape)
+
+    def display(self, ax: Axes | None = None) -> Axes:
+        if ax is None:
+            ax = plt.figure().add_subplot()  # pyright: ignore[reportUnknownMemberType]
+
+        if not self.mark:
+            return ax
+
+        kwargs: dict[str, Any] = {}
+
+        if self.x is not None:
+            kwargs["x"] = self.data.select(self.x).to_series()
+
+        if self.y is not None:
+            kwargs["y"] = self.data.select(self.y).to_series()
+
+        self.mark.plot(ax, **kwargs)
+
+        return ax
+
     #     if self.mark is None:
     #         msg = "Mark must be defined before displaying the chart"
     #         raise ValueError(msg)
@@ -100,5 +118,5 @@ class Chart:
 
     #     return grid.axes.squeeze() if grid.axes.size == 1 else grid.axes
 
-    # def _display_(self) -> Axes | np.ndarray[Any, Any]:
-    #     return self.display()
+    def _display_(self) -> Axes:
+        return self.display()

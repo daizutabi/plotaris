@@ -65,10 +65,12 @@ ignore = ["ANN401", "ARG001", "C901", "D", "ERA001", "PLR0913"]
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["A001", "ANN", "ARG", "D", "FBT", "PLR", "PT", "S", "SLF"]
+"tests/*" = ["A001", "ANN", "ARG", "FBT", "PLR", "PT", "S", "SLF"]
+"notebooks/*" = ["ANN", "ARG", "I002", "INP", "PLR", "SLF"]
 
 [tool.basedpyright]
 include = ["src", "tests"]
+ignore = ["notebooks"]
 reportAny = false
 reportExplicitAny = false
 reportUnusedCallResult = false

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     import polars as pl
 
 
-type Property = str | int
+type Property = str | int | float
 type Palette = Mapping[tuple[Any, ...], Property]
 
 SIZES = [50, 100, 150, 200, 250]
