@@ -66,7 +66,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["A001", "ANN", "ARG", "FBT", "PLR", "PT", "S", "SLF"]
-"notebooks/*" = ["ANN", "ARG", "I002", "INP", "PLR", "SLF"]
+"notebooks/*" = ["ANN", "ARG", "B", "I002", "INP", "PLC", "PLR", "SLF"]
 
 [tool.basedpyright]
 include = ["src", "tests"]

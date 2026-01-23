@@ -49,7 +49,7 @@ class Chart:
         if x is not None:
             self.x = x
         if y is not None:
-            self.x = y
+            self.y = y
         if color is not None:
             self.color = to_tuple(color)
         if size is not None:

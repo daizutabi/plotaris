@@ -50,7 +50,7 @@ def test_encoding_items() -> None:
     assert items == [("color", ("c",)), ("size", ("d",))]
 
 
-def test_encoding_set_mock(mocker: MockerFixture) -> None:
+def test_encoding_build_palettes_mock(mocker: MockerFixture) -> None:
     mock_create_palette = mocker.patch(
         "plotaris.core.encoding.create_palette",
         return_value="a",
@@ -62,7 +62,7 @@ def test_encoding_set_mock(mocker: MockerFixture) -> None:
     mock_create_palette.assert_called_with(mocker.ANY, ("b",), [10, 20], SIZES)
 
 
-def test_encoding_set(df: pl.DataFrame) -> None:
+def test_encoding_build_palettes(df: pl.DataFrame) -> None:
     enc = Encoding(size=("a",))
     palettes = enc.build_palettes(df)
     assert palettes == {"size": {("A",): 50, ("B",): 100, ("C",): 150}}
@@ -79,7 +79,12 @@ def test_encoding_set(df: pl.DataFrame) -> None:
         (5, 50, "s"),
     ],
 )
-def test_encoding_get(df: pl.DataFrame, index: int, size: int, shape: str) -> None:
+def test_encoding_get_properties(
+    df: pl.DataFrame,
+    index: int,
+    size: int,
+    shape: str,
+) -> None:
     enc = Encoding(size=("a", "b"), shape=("b",))
     palettes = enc.build_palettes(df)
     x = df.row(index, named=True)
