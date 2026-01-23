@@ -4,7 +4,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from plotaris.core.data import FacetData, GroupedData, group_by
+from plotaris.core.group import FacetData, GroupedData, group_by
 
 
 @pytest.fixture(scope="module")

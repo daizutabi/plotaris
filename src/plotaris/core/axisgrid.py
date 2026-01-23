@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Concatenate, Literal, Self
 
 import matplotlib.pyplot as plt
 
-from .data import Facet, FacetCollection, FacetData
+from .group import Facet, FacetCollection, FacetData
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable

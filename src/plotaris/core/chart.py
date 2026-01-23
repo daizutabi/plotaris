@@ -8,8 +8,8 @@ from plotaris.marks.bar import BarMark
 from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 
-from .data import to_tuple
 from .encoding import Encoding
+from .group import to_tuple
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
