@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 
@@ -86,40 +86,33 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
 
 
 class Group:
-    """Group a DataFrame and provide integer indices for accessing groups.
-
-    This class takes a DataFrame and a mapping of dimension (e.g., "row",
-    "col") to columns in the DataFrame. It groups the data by these
-    columns and generates a unique integer index for each combination of
-    values in each dimension.
-    """
-
-    mapping: dict[str, tuple[str, ...]]
-    """A dictionary mapping dimension to a tuple of columns."""
     index: pl.DataFrame
     """A DataFrame where each row corresponds to a data group.
 
     Columns are dimension (e.g., "row", "col") and values are
     the generated integer indices for that dimension.
     """
+    mapping: dict[str, pl.DataFrame]
     data: list[pl.DataFrame]
     """A list of DataFrames, where each DataFrame is a chunk of the original data."""
 
     def __init__(self, data: pl.DataFrame, **columns: str | Iterable[str]) -> None:
-        self.mapping = {dim: to_tuple(cols) for dim, cols in columns.items()}
+        mapping = {dim: to_tuple(cols) for dim, cols in columns.items()}
+        self.mapping = {}
 
         if data.is_empty():
-            self.index = pl.DataFrame({n: [] for n in self.mapping})
+            self.index = pl.DataFrame({n: [] for n in mapping})
             self.data = []
             return
 
-        index, self.data = group_by(data, *self.mapping.values())
+        index, self.data = group_by(data, *mapping.values())
 
-        for name, cs in self.mapping.items():
-            index = with_index(index, cs, f"_{name}_index")
+        for dim, cols in mapping.items():
+            self.mapping[dim] = index.select(cols).unique(maintain_order=True)
+            index = with_index(index, cols, f"_{dim}_index")
 
-        named_exprs = {name: f"_{name}_index" for name in self.mapping}
-        self.index = index.select(**named_exprs) if self.mapping else index
+        named_exprs = {dim: f"_{dim}_index" for dim in mapping}
+        self.index = index.select(**named_exprs) if mapping else index
 
     def __getitem__(self, index: int) -> pl.DataFrame:
         return self.data[index]
@@ -130,26 +123,22 @@ class Group:
     def __iter__(self) -> Iterator[pl.DataFrame]:
         return iter(self.data)
 
-    def n_unique(self, name: str) -> int:
+    def n_unique(self, dimension: str, /) -> int:
         """Get the number of unique values for a given dimension.
 
         Args:
-            name: The name of the dimension (e.g., "row", "col").
+            dimension: The name of the dimension (e.g., "row", "col").
 
         Returns:
             The number of unique values in the dimension.
         """
-        if name not in self.index.columns:
-            return 0
-
-        max_val = self.index[name].max()
-        return 0 if max_val is None else cast("int", max_val) + 1
+        return len(self.mapping[dimension])
 
     @overload
     def item(
         self,
         index: int,
-        name: str,
+        dimension: str,
         *,
         named: Literal[False] = ...,
     ) -> tuple[Any, ...]: ...
@@ -158,7 +147,7 @@ class Group:
     def item(
         self,
         index: int,
-        name: str,
+        dimension: str,
         *,
         named: Literal[True],
     ) -> dict[str, Any]: ...
@@ -166,31 +155,44 @@ class Group:
     def item(
         self,
         index: int,
-        name: str,
+        dimension: str,
         *,
         named: bool = False,
     ) -> tuple[Any, ...] | dict[str, Any]:
-        """Retrieve the grouping values for a specific group and dimension.
-
-        Args:
-            index: The integer index of the data group.
-            name: The name of the dimension (e.g., "row", "col").
-            named: If True, return a dictionary mapping column names to
-                values. If False, return a tuple of values.
-
-        Returns:
-            A tuple or dictionary of the grouping values.
-        """
-        columns = self.mapping[name]
-        df = self.data[index].select(columns)
-
-        if len(df) == 0:
+        if len(self.mapping[dimension]) == 0:
             return {} if named else ()
-
-        return df.row(0, named=named)
+        i = self.index.item(index, dimension)
+        return self.mapping[dimension].row(i, named=named)
 
     @overload
-    def get_label(
+    def items(
+        self,
+        dimension: str,
+        *,
+        named: Literal[False] = ...,
+    ) -> list[tuple[Any, ...]]: ...
+
+    @overload
+    def items(
+        self,
+        dimension: str,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
+
+    def items(
+        self,
+        dimension: str,
+        *,
+        named: bool = False,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        if named:
+            return [self.item(i, dimension, named=True) for i in range(len(self))]
+
+        return [self.item(i, dimension, named=False) for i in range(len(self))]
+
+    @overload
+    def dimension(
         self,
         index: int,
         *,
@@ -198,63 +200,44 @@ class Group:
     ) -> dict[str, tuple[Any, ...]]: ...
 
     @overload
-    def get_label(
+    def dimension(
         self,
         index: int,
         *,
         named: Literal[True],
     ) -> dict[str, dict[str, Any]]: ...
 
-    def get_label(
+    def dimension(
         self,
         index: int,
         *,
         named: bool = False,
     ) -> dict[str, tuple[Any, ...]] | dict[str, dict[str, Any]]:
-        """Retrieve all grouping values for a single data group.
-
-        Args:
-            index: The integer index of the data group.
-            named: If True, the values for each dimension will be dictionaries.
-                If False, they will be tuples.
-
-        Returns:
-            A dictionary mapping dimension names to their grouping values.
-        """
         if named:
             return {n: self.item(index, n, named=True) for n in self.mapping}
 
         return {n: self.item(index, n, named=False) for n in self.mapping}
 
     @overload
-    def get_labels(
+    def dimensions(
         self,
         *,
         named: Literal[False] = ...,
     ) -> list[dict[str, tuple[Any, ...]]]: ...
 
     @overload
-    def get_labels(
+    def dimensions(
         self,
         *,
         named: Literal[True],
     ) -> list[dict[str, dict[str, Any]]]: ...
 
-    def get_labels(
+    def dimensions(
         self,
         *,
         named: bool = False,
     ) -> list[dict[str, tuple[Any, ...]]] | list[dict[str, dict[str, Any]]]:
-        """Retrieve the labels for all data groups.
-
-        Args:
-            named: If True, the values for each dimension will be dictionaries.
-                If False, they will be tuples.
-
-        Returns:
-            A list of dictionaries, where each dictionary is a group's label.
-        """
         if named:
-            return [self.get_label(i, named=True) for i in range(len(self))]
+            return [self.dimension(i, named=True) for i in range(len(self))]
 
-        return [self.get_label(i, named=False) for i in range(len(self))]
+        return [self.dimension(i, named=False) for i in range(len(self))]

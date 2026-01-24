@@ -194,13 +194,9 @@ class FacetData:
             )
 
         self.group = group
-        self.nrows = self.group.n_unique("row")
-        self.ncols = self.group.n_unique("col")
+        self.nrows = self.group.n_unique("row") or 1
+        self.ncols = self.group.n_unique("col") or 1
 
-        self._prepare()
-
-    def _prepare(self) -> None:
-        """Compute and cache lookup tables for grid metadata."""
         it = enumerate(self.group.index.rows())
         self._lookup = {(cast("int", r), cast("int", c)): i for i, (r, c) in it}
 
@@ -228,7 +224,7 @@ class FacetData:
         if (row, col) in self._lookup:
             index = self._lookup[row, col]
             data = self.group[index]
-            labels = self.group.get_label(index, named=True)
+            labels = self.group.dimension(index, named=True)
             row_label = labels["row"]
             col_label = labels["col"]
         else:

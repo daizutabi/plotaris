@@ -24,7 +24,7 @@ def test_facet_data_empty() -> None:
     assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 0
     assert result.ncols == 0
-    assert result.group.get_labels() == []
+    assert result.group.dimensions() == []
 
 
 @pytest.fixture(scope="module")
@@ -37,7 +37,7 @@ def test_facet_row_col(facet_data: FacetData) -> None:
     assert_frame_equal(facet_data.group.index, expected, check_dtypes=False)
     assert facet_data.nrows == 2
     assert facet_data.ncols == 3
-    assert facet_data.group.get_labels(named=True) == [
+    assert facet_data.group.dimensions(named=True) == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
@@ -55,7 +55,7 @@ def test_facet_row_empty(data: pl.DataFrame) -> None:
     assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 1
     assert result.ncols == 2
-    assert result.group.get_labels() == [
+    assert result.group.dimensions() == [
         {"row": (), "col": (1,)},
         {"row": (), "col": (2,)},
     ]
@@ -71,7 +71,7 @@ def test_facet_col_empty(data: pl.DataFrame) -> None:
     assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 3
     assert result.ncols == 1
-    assert result.group.get_labels(named=True) == [
+    assert result.group.dimensions(named=True) == [
         {"row": {"b": 3}, "col": {}},
         {"row": {"b": 4}, "col": {}},
         {"row": {"b": 5}, "col": {}},
@@ -88,7 +88,7 @@ def test_facet_row_col_empty(data: pl.DataFrame) -> None:
     assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 1
     assert result.ncols == 1
-    assert result.group.get_labels() == [{"row": (), "col": ()}]
+    assert result.group.dimensions() == [{"row": (), "col": ()}]
     facets = result.facets()
     assert len(facets) == 1
     assert len(facets.filter(has_data=True)) == 1
@@ -101,7 +101,7 @@ def test_facet_row_wrap(data: pl.DataFrame) -> None:
     assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 3
-    assert result.group.get_labels(named=True) == [
+    assert result.group.dimensions(named=True) == [
         {"row": {"x": 0}, "col": {}},
         {"row": {"x": 1}, "col": {}},
         {"row": {"x": 2}, "col": {}},
@@ -121,7 +121,7 @@ def test_facet_col_wrap(data: pl.DataFrame) -> None:
     assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 4
-    assert result.group.get_labels(named=True) == [
+    assert result.group.dimensions(named=True) == [
         {"row": {}, "col": {"x": 0}},
         {"row": {}, "col": {"x": 1}},
         {"row": {}, "col": {"x": 2}},

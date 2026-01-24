@@ -118,6 +118,9 @@ def test_group_columns_empty() -> None:
     gr = Group(data, a=[], b=[])
     expected = pl.DataFrame({"a": [0], "b": [0]})
     assert_frame_equal(gr.index, expected, check_dtypes=False)
+    df = pl.DataFrame()
+    assert_frame_equal(gr.mapping["a"], df, check_dtypes=False)
+    assert_frame_equal(gr.mapping["b"], df, check_dtypes=False)
     assert len(gr) == 1
     assert_frame_equal(gr[0], data)
 
@@ -126,6 +129,7 @@ def test_group_without_columns() -> None:
     data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
     gr = Group(data)
     assert_frame_equal(gr.index, pl.DataFrame([{}]))
+    assert gr.mapping == {}
     assert len(gr) == 1
     assert_frame_equal(gr[0], data)
 
@@ -141,144 +145,152 @@ def data() -> pl.DataFrame:
     )
 
 
-def test_group_mapping_str_str(data: pl.DataFrame) -> None:
-    result = Group(data, row="a", col="b")
+@pytest.mark.parametrize(("name", "values"), [("a", [1, 2]), ("b", [3, 4, 5])])
+def test_group_columns_str(data: pl.DataFrame, name: str, values: list[int]) -> None:
+    gr = Group(data, row=name)
+
+    n = len(values)
+    expected = pl.DataFrame({"row": range(n)})
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
+
+    assert len(gr) == n
+    assert gr.n_unique("row") == n
+
+
+def test_group_columns_str_str(data: pl.DataFrame) -> None:
+    gr = Group(data, row="a", col="b")
 
     expected = pl.DataFrame({"row": [0, 0, 1, 1], "col": [0, 1, 1, 2]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
 
-    assert len(result) == 4
-    assert result.item(0, "row") == (1,)
-    assert result.item(1, "row") == (1,)
-    assert result.item(2, "row") == (2,)
-    assert result.item(3, "row") == (2,)
-    assert result.item(3, "row", named=True) == {"a": 2}
-    assert result.item(0, "col") == (3,)
-    assert result.item(1, "col") == (4,)
-    assert result.item(2, "col") == (4,)
-    assert result.item(3, "col") == (5,)
-    assert result.item(3, "col", named=True) == {"b": 5}
-    assert result.get_label(0) == {"row": (1,), "col": (3,)}
-    assert result.get_label(1) == {"row": (1,), "col": (4,)}
-    assert result.get_label(2) == {"row": (2,), "col": (4,)}
-    assert result.get_label(3) == {"row": (2,), "col": (5,)}
-    assert result.get_label(0, named=True) == {"row": {"a": 1}, "col": {"b": 3}}
-    assert result.get_label(1, named=True) == {"row": {"a": 1}, "col": {"b": 4}}
-    assert result.get_label(2, named=True) == {"row": {"a": 2}, "col": {"b": 4}}
-    assert result.get_label(3, named=True) == {"row": {"a": 2}, "col": {"b": 5}}
-    assert result.get_labels() == [
+    expected = pl.DataFrame({"a": [1, 2]})
+    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
+    expected = pl.DataFrame({"b": [3, 4, 5]})
+    assert_frame_equal(gr.mapping["col"], expected, check_dtypes=False)
+
+    assert len(gr) == 4
+    assert gr.item(0, "row") == (1,)
+    assert gr.item(1, "row") == (1,)
+    assert gr.item(2, "row") == (2,)
+    assert gr.item(3, "row") == (2,)
+    assert gr.item(3, "row", named=True) == {"a": 2}
+    assert gr.items("row") == [(1,), (1,), (2,), (2,)]
+    assert gr.items("row", named=True) == [{"a": 1}, {"a": 1}, {"a": 2}, {"a": 2}]
+    assert gr.item(0, "col") == (3,)
+    assert gr.item(1, "col") == (4,)
+    assert gr.item(2, "col") == (4,)
+    assert gr.item(3, "col") == (5,)
+    assert gr.item(3, "col", named=True) == {"b": 5}
+    assert gr.dimension(0) == {"row": (1,), "col": (3,)}
+    assert gr.dimension(1) == {"row": (1,), "col": (4,)}
+    assert gr.dimension(2) == {"row": (2,), "col": (4,)}
+    assert gr.dimension(3) == {"row": (2,), "col": (5,)}
+    assert gr.dimension(0, named=True) == {"row": {"a": 1}, "col": {"b": 3}}
+    assert gr.dimension(1, named=True) == {"row": {"a": 1}, "col": {"b": 4}}
+    assert gr.dimension(2, named=True) == {"row": {"a": 2}, "col": {"b": 4}}
+    assert gr.dimension(3, named=True) == {"row": {"a": 2}, "col": {"b": 5}}
+    assert gr.dimensions() == [
         {"row": (1,), "col": (3,)},
         {"row": (1,), "col": (4,)},
         {"row": (2,), "col": (4,)},
         {"row": (2,), "col": (5,)},
     ]
-    assert result.get_labels(named=True) == [
+    assert gr.dimensions(named=True) == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 5}},
     ]
-    assert result.n_unique("row") == 2
-    assert result.n_unique("col") == 3
+    assert gr.n_unique("row") == 2
+    assert gr.n_unique("col") == 3
 
 
-def test_group_mapping_str_str_duplicated(data: pl.DataFrame) -> None:
-    result = Group(data, row="b", col="b")
+def test_group_columns_str_str_duplicated(data: pl.DataFrame) -> None:
+    gr = Group(data, row="b", col="b")
 
     expected = pl.DataFrame({"row": [0, 1, 2], "col": [0, 1, 2]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
 
-    assert len(result) == 3
-    assert result.item(0, "row") == (3,)
-    assert result.item(1, "row") == (4,)
-    assert result.item(2, "row") == (5,)
-    assert result.item(2, "row", named=True) == {"b": 5}
-    assert result.item(0, "col") == (3,)
-    assert result.item(1, "col") == (4,)
-    assert result.item(2, "col") == (5,)
-    assert result.item(2, "col", named=True) == {"b": 5}
-    assert result.n_unique("row") == 3
-    assert result.n_unique("col") == 3
+    expected = pl.DataFrame({"b": [3, 4, 5]})
+    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
+    assert_frame_equal(gr.mapping["col"], expected, check_dtypes=False)
 
-
-@pytest.mark.parametrize(("name", "values"), [("a", [1, 2]), ("b", [3, 4, 5])])
-def test_group_mapping_str(data: pl.DataFrame, name: str, values: list[int]) -> None:
-    result = Group(data, row=name)
-
-    n = len(values)
-    expected = pl.DataFrame({"row": range(n)})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
-
-    assert len(result) == n
-    assert result.n_unique("row") == n
-    assert result.n_unique("col") == 0
+    assert len(gr) == 3
+    assert gr.item(0, "row") == (3,)
+    assert gr.item(1, "row") == (4,)
+    assert gr.item(2, "row") == (5,)
+    assert gr.item(2, "row", named=True) == {"b": 5}
+    assert gr.item(0, "col") == (3,)
+    assert gr.item(1, "col") == (4,)
+    assert gr.item(2, "col") == (5,)
+    assert gr.item(2, "col", named=True) == {"b": 5}
+    assert gr.n_unique("row") == 3
+    assert gr.n_unique("col") == 3
 
 
-def test_group_mapping_iterable(data: pl.DataFrame) -> None:
-    result = Group(data, row=("a", "b"))
+def test_group_columns_tuple(data: pl.DataFrame) -> None:
+    gr = Group(data, row=("a", "b"))
 
     expected = pl.DataFrame({"row": [0, 1, 2, 3]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
 
-    assert len(result) == 4
-    assert result.item(0, "row") == (1, 3)
-    assert result.item(1, "row") == (1, 4)
-    assert result.item(2, "row") == (2, 4)
-    assert result.item(3, "row") == (2, 5)
-    assert result.item(3, "row", named=True) == {"a": 2, "b": 5}
-    assert result.n_unique("row") == 4
-    assert result.n_unique("col") == 0
+    expected = pl.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 4, 5]})
+    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
+
+    assert len(gr) == 4
+    assert gr.item(0, "row") == (1, 3)
+    assert gr.item(1, "row") == (1, 4)
+    assert gr.item(2, "row") == (2, 4)
+    assert gr.item(3, "row") == (2, 5)
+    assert gr.item(3, "row", named=True) == {"a": 2, "b": 5}
+    assert gr.n_unique("row") == 4
 
 
-def test_group_mapping_iterable_str(data: pl.DataFrame) -> None:
-    result = Group(data, row=("b", "a"), col="a")
+def test_group_columns_tuple_str(data: pl.DataFrame) -> None:
+    gr = Group(data, row=("b", "a"), col="a")
 
     expected = pl.DataFrame({"row": [0, 1, 2, 3], "col": [0, 0, 1, 1]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
 
-    assert len(result) == 4
-    assert result.item(0, "row") == (3, 1)
-    assert result.item(1, "row") == (4, 1)
-    assert result.item(2, "row") == (4, 2)
-    assert result.item(3, "row") == (5, 2)
-    assert result.item(3, "row", named=True) == {"b": 5, "a": 2}
-    assert result.item(0, "col") == (1,)
-    assert result.item(1, "col") == (1,)
-    assert result.item(2, "col") == (2,)
-    assert result.item(3, "col") == (2,)
-    assert result.item(3, "col", named=True) == {"a": 2}
-    assert result.n_unique("row") == 4
-    assert result.n_unique("col") == 2
+    expected = pl.DataFrame({"b": [3, 4, 4, 5], "a": [1, 1, 2, 2]})
+    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
+    expected = pl.DataFrame({"a": [1, 2]})
+    assert_frame_equal(gr.mapping["col"], expected, check_dtypes=False)
 
-
-@pytest.mark.parametrize("mapping", [{}, {"row": ()}])
-def test_group_mapping_empty(
-    data: pl.DataFrame,
-    mapping: dict[str, str | tuple[str, ...]],
-) -> None:
-    result = Group(data, **mapping)
-
-    expected = pl.DataFrame({"row": [0]} if mapping else [{}])
-
-    assert_frame_equal(result.index, expected, check_dtypes=False)
-    assert len(result) == 1
-    assert_frame_equal(result.data[0], data)
+    assert len(gr) == 4
+    assert gr.item(0, "row") == (3, 1)
+    assert gr.item(1, "row") == (4, 1)
+    assert gr.item(2, "row") == (4, 2)
+    assert gr.item(3, "row") == (5, 2)
+    assert gr.item(3, "row", named=True) == {"b": 5, "a": 2}
+    assert gr.item(0, "col") == (1,)
+    assert gr.item(1, "col") == (1,)
+    assert gr.item(2, "col") == (2,)
+    assert gr.item(3, "col") == (2,)
+    assert gr.item(3, "col", named=True) == {"a": 2}
+    assert gr.n_unique("row") == 4
+    assert gr.n_unique("col") == 2
 
 
-def test_group_mapping_str_empty(data: pl.DataFrame) -> None:
-    result = Group(data, row="a", col=())
+def test_group_columns_str_empty(data: pl.DataFrame) -> None:
+    gr = Group(data, row="a", col=())
 
     expected = pl.DataFrame({"row": [0, 1], "col": [0, 0]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
-    assert len(result) == 2
-    assert result.item(0, "row") == (1,)
-    assert result.item(1, "row") == (2,)
-    assert result.item(0, "col") == ()
-    assert result.item(1, "col") == ()
-    assert result.item(1, "col", named=True) == {}
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
+
+    expected = pl.DataFrame({"a": [1, 2]})
+    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
+
+    assert len(gr) == 2
+    assert gr.item(0, "row") == (1,)
+    assert gr.item(1, "row") == (2,)
+    assert gr.item(0, "col") == ()
+    assert gr.item(1, "col") == ()
+    assert gr.item(1, "col", named=True) == {}
 
 
 def test_group_data_empty() -> None:
     result = Group(pl.DataFrame(), row=["a"])
     expected = pl.DataFrame({"row": []})
     assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert result.mapping == {}
