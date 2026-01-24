@@ -114,15 +114,19 @@ class Group:
         self.index = index
 
     def _get_index_column(self, dimension: str, /) -> str:
+        """Get the internal column name for a dimension's integer index."""
         return f"_{dimension}_index"
 
     def __getitem__(self, index: int) -> pl.DataFrame:
+        """Get the data subgroup at a given index."""
         return self.data[index]
 
     def __len__(self) -> int:
+        """Get the total number of subgroups."""
         return len(self.data)
 
     def __iter__(self) -> Iterator[pl.DataFrame]:
+        """Iterate over all data subgroups."""
         return iter(self.data)
 
     def n_unique(self, dimension: str, /) -> int:
@@ -161,6 +165,17 @@ class Group:
         *,
         named: bool = False,
     ) -> tuple[Any, ...] | dict[str, Any]:
+        """Get the actual value(s) for a given dimension of a specific group.
+
+        Args:
+            index: The integer index of the subgroup.
+            dimension: The name of the dimension (e.g., "row", "col").
+            named: If True, return a dictionary mapping column names to values.
+                Otherwise, return a tuple of values.
+
+        Returns:
+            A tuple or dictionary containing the value(s) for the dimension.
+        """
         if columns := self.mapping[dimension]:
             return self.index.select(columns).row(index, named=named)
         return {} if named else ()
@@ -187,6 +202,16 @@ class Group:
         *,
         named: bool = False,
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """Get the actual value(s) for a given dimension across all groups.
+
+        Args:
+            dimension: The name of the dimension (e.g., "row", "col").
+            named: If True, return a list of dictionaries. Otherwise, return
+                a list of tuples.
+
+        Returns:
+            A list of tuples or dictionaries for the dimension's values.
+        """
         if named:
             return [self.item(i, dimension, named=True) for i in range(len(self))]
 
@@ -214,6 +239,19 @@ class Group:
         *,
         named: bool = False,
     ) -> dict[str, tuple[Any, ...]] | dict[str, dict[str, Any]]:
+        """Get the actual value(s) for all dimensions of a specific group.
+
+        This returns a dictionary mapping each dimension name to its corresponding
+        value(s) for the group at the given index.
+
+        Args:
+            index: The integer index of the subgroup.
+            named: If True, the values in the returned dictionary will also be
+                dictionaries. Otherwise, they will be tuples.
+
+        Returns:
+            A dictionary mapping dimension names to their values.
+        """
         if named:
             return {n: self.item(index, n, named=True) for n in self.mapping}
 
@@ -238,6 +276,18 @@ class Group:
         *,
         named: bool = False,
     ) -> list[dict[str, tuple[Any, ...]]] | list[dict[str, dict[str, Any]]]:
+        """Get the actual value(s) for all dimensions across all groups.
+
+        This is equivalent to calling `dimension()` for each group in a loop.
+
+        Args:
+            named: If True, the values in the returned dictionaries will also be
+                dictionaries. Otherwise, they will be tuples.
+
+        Returns:
+            A list of dictionaries, where each dictionary represents a group's
+            dimensional values.
+        """
         if named:
             return [self.dimension(i, named=True) for i in range(len(self))]
 
