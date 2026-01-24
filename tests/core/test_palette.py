@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import polars as pl
 import pytest
 
-from plotaris.core.encoding import SIZES, Encoding, create_palette
+from plotaris.core.palette import SIZES, Palette, create_palette
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -45,26 +45,26 @@ def test_create_palette_dict(df: pl.DataFrame) -> None:
 
 
 def test_encoding_items() -> None:
-    enc = Encoding(color=("c",), size=("d",))
+    enc = Palette(color=("c",), size=("d",))
     items = list(enc.items())
     assert items == [("color", ("c",)), ("size", ("d",))]
 
 
 def test_encoding_build_palettes_mock(mocker: MockerFixture) -> None:
     mock_create_palette = mocker.patch(
-        "plotaris.core.encoding.create_palette",
+        "plotaris.core.palette.create_palette",
         return_value="a",
     )
 
-    enc = Encoding(color=("a",), size=("b",))
-    palettes = enc.build_palettes(pl.DataFrame(), size=[10, 20])
+    enc = Palette(color=("a",), size=("b",))
+    palettes = enc.build(pl.DataFrame(), size=[10, 20])
     assert palettes == {"color": "a", "size": "a"}
     mock_create_palette.assert_called_with(mocker.ANY, ("b",), [10, 20], SIZES)
 
 
 def test_encoding_build_palettes(df: pl.DataFrame) -> None:
-    enc = Encoding(size=("a",))
-    palettes = enc.build_palettes(df)
+    enc = Palette(size=("a",))
+    palettes = enc.build(df)
     assert palettes == {"size": {("A",): 50, ("B",): 100, ("C",): 150}}
 
 
@@ -85,7 +85,7 @@ def test_encoding_get_properties(
     size: int,
     shape: str,
 ) -> None:
-    enc = Encoding(size=("a", "b"), shape=("b",))
-    palettes = enc.build_palettes(df)
+    enc = Palette(size=("a", "b"), shape=("b",))
+    palettes = enc.build(df)
     x = df.row(index, named=True)
-    assert enc.get_properties(x, palettes) == {"size": size, "shape": shape}
+    assert enc.get(x, palettes) == {"size": size, "shape": shape}

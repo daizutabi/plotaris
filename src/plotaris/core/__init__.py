@@ -1,6 +1,6 @@
 from __future__ import annotations
 
 from .axisgrid import FacetGrid
-from .encoding import Encoding
+from .palette import Palette
 
-__all__ = ["Encoding", "FacetGrid"]
+__all__ = ["FacetGrid", "Palette"]

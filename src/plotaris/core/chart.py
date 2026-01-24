@@ -8,8 +8,8 @@ from plotaris.marks.bar import BarMark
 from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 
-from .encoding import Encoding
 from .group import to_tuple
+from .palette import Palette
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -86,8 +86,8 @@ class Chart:
         return self
 
     @property
-    def encoding(self) -> Encoding:
-        return Encoding(self.color, self.size, self.shape)
+    def encoding(self) -> Palette:
+        return Palette(self.color, self.size, self.shape)
 
     def display(self, ax: Axes | None = None) -> Axes:
         if ax is None:
