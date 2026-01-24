@@ -76,7 +76,7 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
         The DataFrame with the new index column.
     """
     if not columns:
-        return data.with_columns(pl.lit(0).alias(name))
+        return data.with_columns(pl.lit(0).alias(name))  # 0 -> None?
 
     return data.join(
         data.select(columns).unique(maintain_order=True).with_row_index(name),
