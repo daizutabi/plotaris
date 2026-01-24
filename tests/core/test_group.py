@@ -61,14 +61,14 @@ def test_group_by_two(columns: Any) -> None:
 @pytest.mark.parametrize(
     ("columns", "values"),
     [
-        ([], [0, 0, 0, 0]),
+        ([], [None, None, None, None]),
         (["a"], [0, 1, 0, 1]),
         (["b"], [0, 0, 1, 1]),
         (["a", "b"], [0, 1, 2, 3]),
         (["b", "a"], [0, 1, 2, 3]),
     ],
 )
-def test_with_index(columns: list[str], values: list[int]) -> None:
+def test_with_index(columns: list[str], values: list[int | None]) -> None:
     data = pl.DataFrame({"a": [1, 2, 1, 2], "b": [9, 9, 8, 8], "c": [10, 11, 12, 13]})
     result = with_index(data, columns, "x")
     expected = data.with_columns(x=pl.Series(values))
@@ -116,7 +116,7 @@ def test_group_two() -> None:
 def test_group_columns_empty() -> None:
     data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
     gr = Group(data, a=[], b=[])
-    expected = pl.DataFrame({"a": [0], "b": [0]})
+    expected = pl.DataFrame({"a": [None], "b": [None]})
     assert_frame_equal(gr.index, expected, check_dtypes=False)
     df = pl.DataFrame()
     assert_frame_equal(gr.mapping["a"], df, check_dtypes=False)
@@ -275,7 +275,7 @@ def test_group_columns_tuple_str(data: pl.DataFrame) -> None:
 def test_group_columns_str_empty(data: pl.DataFrame) -> None:
     gr = Group(data, row="a", col=())
 
-    expected = pl.DataFrame({"row": [0, 1], "col": [0, 0]})
+    expected = pl.DataFrame({"row": [0, 1], "col": [None, None]})
     assert_frame_equal(gr.index, expected, check_dtypes=False)
 
     expected = pl.DataFrame({"a": [1, 2]})

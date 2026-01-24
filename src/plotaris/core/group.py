@@ -76,7 +76,7 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
         The DataFrame with the new index column.
     """
     if not columns:
-        return data.with_columns(pl.lit(0).alias(name))  # 0 -> None?
+        return data.with_columns(pl.lit(None).alias(name))
 
     return data.join(
         data.select(columns).unique(maintain_order=True).with_row_index(name),
@@ -159,9 +159,9 @@ class Group:
         *,
         named: bool = False,
     ) -> tuple[Any, ...] | dict[str, Any]:
-        if len(self.mapping[dimension]) == 0:
-            return {} if named else ()
         i = self.index.item(index, dimension)
+        if i is None:
+            return {} if named else ()
         return self.mapping[dimension].row(i, named=named)
 
     @overload
