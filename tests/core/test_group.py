@@ -85,6 +85,7 @@ def test_group_empty_with_columns() -> None:
     data = pl.DataFrame({"A": [], "B": [], "C": []})
     gr = Group(data, a="A", b=("B", "C"))
     assert_frame_equal(gr.index, pl.DataFrame({"a": [], "b": []}))
+    assert gr.mapping == {"a": ("A",), "b": ("B", "C")}
     assert gr.data == []
 
 
@@ -92,8 +93,9 @@ def test_group_one() -> None:
     data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
     gr = Group(data, a="A", b=["A"])
 
-    expected = pl.DataFrame({"a": [0, 1], "b": [0, 1]})
+    expected = pl.DataFrame({"A": [1, 2], "_a_index": [0, 1], "_b_index": [0, 1]})
     assert_frame_equal(gr.index, expected, check_dtypes=False)
+
     assert len(gr) == 2
     assert_frame_equal(gr[0], data[0:2])
     assert_frame_equal(gr[1], data[2:])
@@ -103,8 +105,16 @@ def test_group_two() -> None:
     data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
     gr = Group(data, a="A", b=["B"])
 
-    expected = pl.DataFrame({"a": [0, 0, 1, 1], "b": [0, 1, 0, 1]})
+    expected = pl.DataFrame(
+        {
+            "A": [1, 1, 2, 2],
+            "B": [3, 4, 3, 4],
+            "_a_index": [0, 0, 1, 1],
+            "_b_index": [0, 1, 0, 1],
+        },
+    )
     assert_frame_equal(gr.index, expected, check_dtypes=False)
+
     assert len(gr) == 4
     it = iter(gr)
     assert_frame_equal(gr[0], next(it))
@@ -116,11 +126,10 @@ def test_group_two() -> None:
 def test_group_columns_empty() -> None:
     data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
     gr = Group(data, a=[], b=[])
-    expected = pl.DataFrame({"a": [None], "b": [None]})
+
+    expected = pl.DataFrame({"_a_index": [None], "_b_index": [None]})
     assert_frame_equal(gr.index, expected, check_dtypes=False)
-    df = pl.DataFrame()
-    assert_frame_equal(gr.mapping["a"], df, check_dtypes=False)
-    assert_frame_equal(gr.mapping["b"], df, check_dtypes=False)
+
     assert len(gr) == 1
     assert_frame_equal(gr[0], data)
 
@@ -128,7 +137,9 @@ def test_group_columns_empty() -> None:
 def test_group_without_columns() -> None:
     data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
     gr = Group(data)
+
     assert_frame_equal(gr.index, pl.DataFrame([{}]))
+
     assert gr.mapping == {}
     assert len(gr) == 1
     assert_frame_equal(gr[0], data)
@@ -150,8 +161,7 @@ def test_group_columns_str(data: pl.DataFrame, name: str, values: list[int]) -> 
     gr = Group(data, row=name)
 
     n = len(values)
-    expected = pl.DataFrame({"row": range(n)})
-    assert_frame_equal(gr.index, expected, check_dtypes=False)
+    assert gr.index["_row_index"].to_list() == list(range(n))
 
     assert len(gr) == n
     assert gr.n_unique("row") == n
@@ -160,13 +170,15 @@ def test_group_columns_str(data: pl.DataFrame, name: str, values: list[int]) -> 
 def test_group_columns_str_str(data: pl.DataFrame) -> None:
     gr = Group(data, row="a", col="b")
 
-    expected = pl.DataFrame({"row": [0, 0, 1, 1], "col": [0, 1, 1, 2]})
+    expected = pl.DataFrame(
+        {
+            "a": [1, 1, 2, 2],
+            "b": [3, 4, 4, 5],
+            "_row_index": [0, 0, 1, 1],
+            "_col_index": [0, 1, 1, 2],
+        },
+    )
     assert_frame_equal(gr.index, expected, check_dtypes=False)
-
-    expected = pl.DataFrame({"a": [1, 2]})
-    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
-    expected = pl.DataFrame({"b": [3, 4, 5]})
-    assert_frame_equal(gr.mapping["col"], expected, check_dtypes=False)
 
     assert len(gr) == 4
     assert gr.item(0, "row") == (1,)
@@ -208,12 +220,10 @@ def test_group_columns_str_str(data: pl.DataFrame) -> None:
 def test_group_columns_str_str_duplicated(data: pl.DataFrame) -> None:
     gr = Group(data, row="b", col="b")
 
-    expected = pl.DataFrame({"row": [0, 1, 2], "col": [0, 1, 2]})
+    expected = pl.DataFrame(
+        {"b": [3, 4, 5], "_row_index": [0, 1, 2], "_col_index": [0, 1, 2]},
+    )
     assert_frame_equal(gr.index, expected, check_dtypes=False)
-
-    expected = pl.DataFrame({"b": [3, 4, 5]})
-    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
-    assert_frame_equal(gr.mapping["col"], expected, check_dtypes=False)
 
     assert len(gr) == 3
     assert gr.item(0, "row") == (3,)
@@ -231,11 +241,10 @@ def test_group_columns_str_str_duplicated(data: pl.DataFrame) -> None:
 def test_group_columns_tuple(data: pl.DataFrame) -> None:
     gr = Group(data, row=("a", "b"))
 
-    expected = pl.DataFrame({"row": [0, 1, 2, 3]})
+    expected = pl.DataFrame(
+        {"a": [1, 1, 2, 2], "b": [3, 4, 4, 5], "_row_index": [0, 1, 2, 3]},
+    )
     assert_frame_equal(gr.index, expected, check_dtypes=False)
-
-    expected = pl.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 4, 5]})
-    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
 
     assert len(gr) == 4
     assert gr.item(0, "row") == (1, 3)
@@ -249,13 +258,15 @@ def test_group_columns_tuple(data: pl.DataFrame) -> None:
 def test_group_columns_tuple_str(data: pl.DataFrame) -> None:
     gr = Group(data, row=("b", "a"), col="a")
 
-    expected = pl.DataFrame({"row": [0, 1, 2, 3], "col": [0, 0, 1, 1]})
+    expected = pl.DataFrame(
+        {
+            "a": [1, 1, 2, 2],
+            "b": [3, 4, 4, 5],
+            "_row_index": [0, 1, 2, 3],
+            "_col_index": [0, 0, 1, 1],
+        },
+    )
     assert_frame_equal(gr.index, expected, check_dtypes=False)
-
-    expected = pl.DataFrame({"b": [3, 4, 4, 5], "a": [1, 1, 2, 2]})
-    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
-    expected = pl.DataFrame({"a": [1, 2]})
-    assert_frame_equal(gr.mapping["col"], expected, check_dtypes=False)
 
     assert len(gr) == 4
     assert gr.item(0, "row") == (3, 1)
@@ -275,11 +286,10 @@ def test_group_columns_tuple_str(data: pl.DataFrame) -> None:
 def test_group_columns_str_empty(data: pl.DataFrame) -> None:
     gr = Group(data, row="a", col=())
 
-    expected = pl.DataFrame({"row": [0, 1], "col": [None, None]})
+    expected = pl.DataFrame(
+        {"a": [1, 2], "_row_index": [0, 1], "_col_index": [None, None]},
+    )
     assert_frame_equal(gr.index, expected, check_dtypes=False)
-
-    expected = pl.DataFrame({"a": [1, 2]})
-    assert_frame_equal(gr.mapping["row"], expected, check_dtypes=False)
 
     assert len(gr) == 2
     assert gr.item(0, "row") == (1,)
@@ -293,4 +303,3 @@ def test_group_data_empty() -> None:
     result = Group(pl.DataFrame(), row=["a"])
     expected = pl.DataFrame({"row": []})
     assert_frame_equal(result.index, expected, check_dtypes=False)
-    assert result.mapping == {}

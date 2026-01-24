@@ -89,30 +89,32 @@ class Group:
     index: pl.DataFrame
     """A DataFrame where each row corresponds to a data group.
 
-    Columns are dimension (e.g., "row", "col") and values are
-    the generated integer indices for that dimension.
+    It contains the original group keys (actual values from the DataFrame columns)
+    and their corresponding integer indices for each dimension (e.g., "_row_index",
+    "_col_index").
     """
-    mapping: dict[str, pl.DataFrame]
+    mapping: dict[str, tuple[str, ...]]
+    """A mapping from dimension names (e.g., "row", "col") to a tuple of column names."""  # noqa: E501
     data: list[pl.DataFrame]
-    """A list of DataFrames, where each DataFrame is a chunk of the original data."""
+    """A list of DataFrames, where each DataFrame is a subgroup of the original data."""
 
     def __init__(self, data: pl.DataFrame, **columns: str | Iterable[str]) -> None:
-        mapping = {dim: to_tuple(cols) for dim, cols in columns.items()}
-        self.mapping = {}
+        self.mapping = {dim: to_tuple(cols) for dim, cols in columns.items()}
 
         if data.is_empty():
-            self.index = pl.DataFrame({n: [] for n in mapping})
+            self.index = pl.DataFrame({n: [] for n in self.mapping})
             self.data = []
             return
 
-        index, self.data = group_by(data, *mapping.values())
+        index, self.data = group_by(data, *self.mapping.values())
 
-        for dim, cols in mapping.items():
-            self.mapping[dim] = index.select(cols).unique(maintain_order=True)
-            index = with_index(index, cols, f"_{dim}_index")
+        for dim, cols in self.mapping.items():
+            index = with_index(index, cols, self._get_index_column(dim))
 
-        named_exprs = {dim: f"_{dim}_index" for dim in mapping}
-        self.index = index.select(**named_exprs) if mapping else index
+        self.index = index
+
+    def _get_index_column(self, dimension: str, /) -> str:
+        return f"_{dimension}_index"
 
     def __getitem__(self, index: int) -> pl.DataFrame:
         return self.data[index]
@@ -132,7 +134,7 @@ class Group:
         Returns:
             The number of unique values in the dimension.
         """
-        return len(self.mapping[dimension])
+        return self.index[self._get_index_column(dimension)].n_unique()
 
     @overload
     def item(
@@ -159,10 +161,9 @@ class Group:
         *,
         named: bool = False,
     ) -> tuple[Any, ...] | dict[str, Any]:
-        i = self.index.item(index, dimension)
-        if i is None:
-            return {} if named else ()
-        return self.mapping[dimension].row(i, named=named)
+        if columns := self.mapping[dimension]:
+            return self.index.select(columns).row(index, named=named)
+        return {} if named else ()
 
     @overload
     def items(
