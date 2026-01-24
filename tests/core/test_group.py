@@ -1,10 +1,133 @@
 from __future__ import annotations
 
+from typing import Any
+
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from plotaris.core.group import GroupedData, group_by
+from plotaris.core.group import Group, group_by, to_tuple, with_index
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [(None, ()), ("abc", ("abc",)), (["abc"], ("abc",))],
+)
+def test_to_tuple(values: str | list[str] | None, expected: tuple[str, ...]) -> None:
+    assert to_tuple(values) == expected
+
+
+@pytest.mark.parametrize("data", [pl.DataFrame(), pl.DataFrame({"a": [1, 2]})])
+def test_group_by_without_columns(data: pl.DataFrame) -> None:
+    index, dfs = group_by(data)
+    assert_frame_equal(index, pl.DataFrame([{}]))
+    assert len(dfs) == 1
+    assert_frame_equal(dfs[0], data)
+
+
+def test_group_by_empty() -> None:
+    data = pl.DataFrame({"a": [], "b": []})
+    index, dfs = group_by(data, "a")
+    assert_frame_equal(index, pl.DataFrame({"a": []}))
+    assert len(index) == 0
+    assert dfs == []
+
+
+@pytest.mark.parametrize("columns", [("a",), ("a", "a")])
+def test_group_by_one(columns: tuple[str, ...]) -> None:
+    data = pl.DataFrame({"a": [1, 2, 1, 2], "b": [9, 8, 7, 6]})
+    index, dfs = group_by(data, *columns)
+    assert_frame_equal(index, pl.DataFrame({"a": [1, 2]}))
+    assert len(dfs) == 2
+    assert_frame_equal(dfs[0], data[[0, 2]])
+    assert_frame_equal(dfs[1], data[[1, 3]])
+
+
+@pytest.mark.parametrize(
+    "columns",
+    [("a", "b"), ("b", "a"), (["a"], "b"), (["a"], ["b"]), (["b", "a"], "a")],
+)
+def test_group_by_two(columns: Any) -> None:
+    data = pl.DataFrame({"a": [1, 2, 1, 2], "b": [9, 8, 7, 6]})
+    index, dfs = group_by(data, *columns)
+    assert_frame_equal(index, data)
+    assert len(dfs) == 4
+    assert_frame_equal(dfs[0], data[0])
+    assert_frame_equal(dfs[1], data[1])
+    assert_frame_equal(dfs[2], data[2])
+    assert_frame_equal(dfs[3], data[3])
+
+
+@pytest.mark.parametrize(
+    ("columns", "values"),
+    [
+        ([], [0, 0, 0, 0]),
+        (["a"], [0, 1, 0, 1]),
+        (["b"], [0, 0, 1, 1]),
+        (["a", "b"], [0, 1, 2, 3]),
+        (["b", "a"], [0, 1, 2, 3]),
+    ],
+)
+def test_with_index(columns: list[str], values: list[int]) -> None:
+    data = pl.DataFrame({"a": [1, 2, 1, 2], "b": [9, 9, 8, 8], "c": [10, 11, 12, 13]})
+    result = with_index(data, columns, "x")
+    expected = data.with_columns(x=pl.Series(values))
+    assert_frame_equal(result, expected, check_dtypes=False)
+
+
+def test_group_empty() -> None:
+    gr = Group(pl.DataFrame())
+    assert_frame_equal(gr.index, pl.DataFrame())
+    assert gr.data == []
+
+
+def test_group_empty_with_columns() -> None:
+    data = pl.DataFrame({"A": [], "B": [], "C": []})
+    gr = Group(data, a="A", b=("B", "C"))
+    assert_frame_equal(gr.index, pl.DataFrame({"a": [], "b": []}))
+    assert gr.data == []
+
+
+def test_group_one() -> None:
+    data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
+    gr = Group(data, a="A", b=["A"])
+
+    expected = pl.DataFrame({"a": [0, 1], "b": [0, 1]})
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
+    assert len(gr) == 2
+    assert_frame_equal(gr[0], data[0:2])
+    assert_frame_equal(gr[1], data[2:])
+
+
+def test_group_two() -> None:
+    data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
+    gr = Group(data, a="A", b=["B"])
+
+    expected = pl.DataFrame({"a": [0, 0, 1, 1], "b": [0, 1, 0, 1]})
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
+    assert len(gr) == 4
+    it = iter(gr)
+    assert_frame_equal(gr[0], next(it))
+    assert_frame_equal(gr[1], next(it))
+    assert_frame_equal(gr[2], next(it))
+    assert_frame_equal(gr[3], next(it))
+
+
+def test_group_columns_empty() -> None:
+    data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
+    gr = Group(data, a=[], b=[])
+    expected = pl.DataFrame({"a": [0], "b": [0]})
+    assert_frame_equal(gr.index, expected, check_dtypes=False)
+    assert len(gr) == 1
+    assert_frame_equal(gr[0], data)
+
+
+def test_group_without_columns() -> None:
+    data = pl.DataFrame({"A": [1, 1, 2, 2], "B": [3, 4, 3, 4]})
+    gr = Group(data)
+    assert_frame_equal(gr.index, pl.DataFrame([{}]))
+    assert len(gr) == 1
+    assert_frame_equal(gr[0], data)
 
 
 @pytest.fixture(scope="module")
@@ -18,8 +141,8 @@ def data() -> pl.DataFrame:
     )
 
 
-def test_mapping_str_str(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": "a", "col": "b"})
+def test_group_mapping_str_str(data: pl.DataFrame) -> None:
+    result = Group(data, row="a", col="b")
 
     expected = pl.DataFrame({"row": [0, 0, 1, 1], "col": [0, 1, 1, 2]})
     assert_frame_equal(result.index, expected, check_dtypes=False)
@@ -59,8 +182,8 @@ def test_mapping_str_str(data: pl.DataFrame) -> None:
     assert result.n_unique("col") == 3
 
 
-def test_mapping_str_str_duplicated(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": "b", "col": "b"})
+def test_group_mapping_str_str_duplicated(data: pl.DataFrame) -> None:
+    result = Group(data, row="b", col="b")
 
     expected = pl.DataFrame({"row": [0, 1, 2], "col": [0, 1, 2]})
     assert_frame_equal(result.index, expected, check_dtypes=False)
@@ -79,8 +202,8 @@ def test_mapping_str_str_duplicated(data: pl.DataFrame) -> None:
 
 
 @pytest.mark.parametrize(("name", "values"), [("a", [1, 2]), ("b", [3, 4, 5])])
-def test_mapping_str(data: pl.DataFrame, name: str, values: list[int]) -> None:
-    result = GroupedData(data, {"row": name})
+def test_group_mapping_str(data: pl.DataFrame, name: str, values: list[int]) -> None:
+    result = Group(data, row=name)
 
     n = len(values)
     expected = pl.DataFrame({"row": range(n)})
@@ -91,8 +214,8 @@ def test_mapping_str(data: pl.DataFrame, name: str, values: list[int]) -> None:
     assert result.n_unique("col") == 0
 
 
-def test_mapping_iterable(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": ("a", "b")})
+def test_group_mapping_iterable(data: pl.DataFrame) -> None:
+    result = Group(data, row=("a", "b"))
 
     expected = pl.DataFrame({"row": [0, 1, 2, 3]})
     assert_frame_equal(result.index, expected, check_dtypes=False)
@@ -107,8 +230,8 @@ def test_mapping_iterable(data: pl.DataFrame) -> None:
     assert result.n_unique("col") == 0
 
 
-def test_mapping_iterable_str(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": ("b", "a"), "col": "a"})
+def test_group_mapping_iterable_str(data: pl.DataFrame) -> None:
+    result = Group(data, row=("b", "a"), col="a")
 
     expected = pl.DataFrame({"row": [0, 1, 2, 3], "col": [0, 0, 1, 1]})
     assert_frame_equal(result.index, expected, check_dtypes=False)
@@ -129,11 +252,11 @@ def test_mapping_iterable_str(data: pl.DataFrame) -> None:
 
 
 @pytest.mark.parametrize("mapping", [{}, {"row": ()}])
-def test_mapping_empty(
+def test_group_mapping_empty(
     data: pl.DataFrame,
     mapping: dict[str, str | tuple[str, ...]],
 ) -> None:
-    result = GroupedData(data, mapping)
+    result = Group(data, **mapping)
 
     expected = pl.DataFrame({"row": [0]} if mapping else [{}])
 
@@ -142,8 +265,8 @@ def test_mapping_empty(
     assert_frame_equal(result.data[0], data)
 
 
-def test_mapping_str_empty(data: pl.DataFrame) -> None:
-    result = GroupedData(data, {"row": "a", "col": ()})
+def test_group_mapping_str_empty(data: pl.DataFrame) -> None:
+    result = Group(data, row="a", col=())
 
     expected = pl.DataFrame({"row": [0, 1], "col": [0, 0]})
     assert_frame_equal(result.index, expected, check_dtypes=False)
@@ -155,13 +278,7 @@ def test_mapping_str_empty(data: pl.DataFrame) -> None:
     assert result.item(1, "col", named=True) == {}
 
 
-def test_data_empty() -> None:
-    result = GroupedData(pl.DataFrame(), {"row": ["a"]})
+def test_group_data_empty() -> None:
+    result = Group(pl.DataFrame(), row=["a"])
     expected = pl.DataFrame({"row": []})
     assert_frame_equal(result.index, expected, check_dtypes=False)
-
-
-def test_group_by_no_data() -> None:
-    group, dfs = group_by(pl.DataFrame({"x": []}), "x")
-    assert_frame_equal(group, pl.DataFrame({"x": []}))
-    assert len(dfs) == 0

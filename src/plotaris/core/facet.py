@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Self, cast
 
 import polars as pl
 
-from .group import GroupedData
+from .group import Group
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -144,7 +144,7 @@ class FacetCollection[T: Facet]:
         return self.__class__(items)
 
 
-class FacetData(GroupedData):
+class FacetData:
     """A specialized `GroupedData` for creating 2D facet grids.
 
     This class manages the mapping of data to a grid of subplots defined by
@@ -152,6 +152,7 @@ class FacetData(GroupedData):
     into a 2D grid.
     """
 
+    group: Group
     nrows: int
     """The number of rows in the facet grid."""
     ncols: int
@@ -178,28 +179,29 @@ class FacetData(GroupedData):
             wrap: If provided, wraps a 1D facet grid (defined by `row` or
                 `col`) into a 2D grid with this many columns.
         """
-        super().__init__(data, {"row": row, "col": col})
+        group = Group(data, row=row or (), col=col or ())
 
         if row and wrap:
-            self.index: pl.DataFrame = self.index.with_columns(
+            group.index = group.index.with_columns(
                 (pl.col("row") % wrap).alias("row"),
                 (pl.col("row") // wrap).alias("col"),
             )
 
         elif col and wrap:
-            self.index = self.index.with_columns(
+            group.index = group.index.with_columns(
                 (pl.col("col") // wrap).alias("row"),
                 (pl.col("col") % wrap).alias("col"),
             )
 
-        self.nrows = self.n_unique("row")
-        self.ncols = self.n_unique("col")
+        self.group = group
+        self.nrows = self.group.n_unique("row")
+        self.ncols = self.group.n_unique("col")
 
         self._prepare()
 
     def _prepare(self) -> None:
         """Compute and cache lookup tables for grid metadata."""
-        it = enumerate(self.index.rows())
+        it = enumerate(self.group.index.rows())
         self._lookup = {(cast("int", r), cast("int", c)): i for i, (r, c) in it}
 
         self._min_col_for_row = {}
@@ -225,8 +227,8 @@ class FacetData(GroupedData):
         """
         if (row, col) in self._lookup:
             index = self._lookup[row, col]
-            data = self.data[index]
-            labels = self.get_label(index, named=True)
+            data = self.group[index]
+            labels = self.group.get_label(index, named=True)
             row_label = labels["row"]
             col_label = labels["col"]
         else:

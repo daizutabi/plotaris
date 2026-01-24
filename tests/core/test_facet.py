@@ -21,10 +21,10 @@ def data() -> pl.DataFrame:
 def test_facet_data_empty() -> None:
     result = FacetData(pl.DataFrame(), ("a",), ("b",))
     expected = pl.DataFrame({"row": [], "col": []})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 0
     assert result.ncols == 0
-    assert result.get_labels() == []
+    assert result.group.get_labels() == []
 
 
 @pytest.fixture(scope="module")
@@ -34,10 +34,10 @@ def facet_data(data: pl.DataFrame) -> FacetData:
 
 def test_facet_row_col(facet_data: FacetData) -> None:
     expected = pl.DataFrame({"row": [0, 0, 1, 1], "col": [0, 1, 1, 2]})
-    assert_frame_equal(facet_data.index, expected, check_dtypes=False)
+    assert_frame_equal(facet_data.group.index, expected, check_dtypes=False)
     assert facet_data.nrows == 2
     assert facet_data.ncols == 3
-    assert facet_data.get_labels(named=True) == [
+    assert facet_data.group.get_labels(named=True) == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
@@ -52,10 +52,10 @@ def test_facet_row_col(facet_data: FacetData) -> None:
 def test_facet_row_empty(data: pl.DataFrame) -> None:
     result = FacetData(data, col="a")
     expected = pl.DataFrame({"row": [0, 0], "col": [0, 1]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 1
     assert result.ncols == 2
-    assert result.get_labels() == [
+    assert result.group.get_labels() == [
         {"row": (), "col": (1,)},
         {"row": (), "col": (2,)},
     ]
@@ -68,10 +68,10 @@ def test_facet_row_empty(data: pl.DataFrame) -> None:
 def test_facet_col_empty(data: pl.DataFrame) -> None:
     result = FacetData(data, row="b")
     expected = pl.DataFrame({"row": [0, 1, 2], "col": [0, 0, 0]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 3
     assert result.ncols == 1
-    assert result.get_labels(named=True) == [
+    assert result.group.get_labels(named=True) == [
         {"row": {"b": 3}, "col": {}},
         {"row": {"b": 4}, "col": {}},
         {"row": {"b": 5}, "col": {}},
@@ -85,10 +85,10 @@ def test_facet_col_empty(data: pl.DataFrame) -> None:
 def test_facet_row_col_empty(data: pl.DataFrame) -> None:
     result = FacetData(data)
     expected = pl.DataFrame({"row": [0], "col": [0]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 1
     assert result.ncols == 1
-    assert result.get_labels() == [{"row": (), "col": ()}]
+    assert result.group.get_labels() == [{"row": (), "col": ()}]
     facets = result.facets()
     assert len(facets) == 1
     assert len(facets.filter(has_data=True)) == 1
@@ -98,10 +98,10 @@ def test_facet_row_col_empty(data: pl.DataFrame) -> None:
 def test_facet_row_wrap(data: pl.DataFrame) -> None:
     result = FacetData(data, row="x", wrap=2)
     expected = pl.DataFrame({"row": [0, 1, 0, 1, 0, 1], "col": [0, 0, 1, 1, 2, 2]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 3
-    assert result.get_labels(named=True) == [
+    assert result.group.get_labels(named=True) == [
         {"row": {"x": 0}, "col": {}},
         {"row": {"x": 1}, "col": {}},
         {"row": {"x": 2}, "col": {}},
@@ -118,10 +118,10 @@ def test_facet_row_wrap(data: pl.DataFrame) -> None:
 def test_facet_col_wrap(data: pl.DataFrame) -> None:
     result = FacetData(data, col="x", wrap=4)
     expected = pl.DataFrame({"row": [0, 0, 0, 0, 1, 1], "col": [0, 1, 2, 3, 0, 1]})
-    assert_frame_equal(result.index, expected, check_dtypes=False)
+    assert_frame_equal(result.group.index, expected, check_dtypes=False)
     assert result.nrows == 2
     assert result.ncols == 4
-    assert result.get_labels(named=True) == [
+    assert result.group.get_labels(named=True) == [
         {"row": {}, "col": {"x": 0}},
         {"row": {}, "col": {"x": 1}},
         {"row": {}, "col": {"x": 2}},
