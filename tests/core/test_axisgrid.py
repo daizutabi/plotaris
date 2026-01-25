@@ -6,13 +6,11 @@ import matplotlib.pyplot as plt
 import polars as pl
 import pytest
 
-from plotaris.core.axisgrid import FacetGrid
+from plotaris.core.axisgrid import FacetAxes, FacetGrid
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from pytest_mock import MockerFixture
-
-    from plotaris.core.axisgrid import FacetAxes
 
 
 @pytest.fixture(scope="module")
@@ -74,7 +72,7 @@ def test_facet_axes_filter(
     rcs: list[tuple[int, int]],
 ) -> None:
     result = grid.facet_axes.filter(predicate=None, **{name: True}).axes
-    expected = [grid.facet_axes[rc] for rc in rcs]
+    expected = [grid.facet_axes.get_axes(*rc) for rc in rcs]
     assert result == expected
 
 
@@ -103,7 +101,7 @@ def test_axes_property_after_delaxes(
     rcs: list[tuple[int, int]],
 ) -> None:
     result = grid_delaxes.facet_axes.filter(predicate=None, **{name: True}).axes
-    expected = [grid_delaxes.facet_axes[rc] for rc in rcs]
+    expected = [grid_delaxes.facet_axes.get_axes(*rc) for rc in rcs]
     assert result == expected
 
 
@@ -133,7 +131,8 @@ def test_all(data: pl.DataFrame) -> None:
 def test_map(grid: FacetGrid) -> None:
     axes: list[Axes] = []
 
-    def func(facet_axes: FacetAxes) -> None:  # pyright: ignore[reportUnusedParameter]
+    def func(facet_axes: FacetAxes) -> None:
+        assert isinstance(facet_axes, FacetAxes)
         axes.append(plt.gca())
 
     grid.map(func)
@@ -151,8 +150,8 @@ def test_map_axes(grid: FacetGrid) -> None:
 
     grid.map_axes(func, 1, y=2)
 
-    assert axes[0] == grid.facet_axes[0, 0]
-    assert axes[-1] == grid.facet_axes[1, 2]
+    assert axes[0] == grid.facet_axes.get_axes(0, 0)
+    assert axes[-1] == grid.facet_axes.get_axes(1, 2)
 
 
 def test_map_dataframe(mocker: MockerFixture) -> None:

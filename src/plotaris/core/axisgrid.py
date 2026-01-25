@@ -38,9 +38,6 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
             return facet_axes.axes
         return None
 
-    def __getitem__(self, rc: tuple[int, int]) -> Axes | None:
-        return self.get_axes(*rc)
-
     @property
     def axes(self) -> list[Axes]:
         return [facet_axes.axes for facet_axes in self]
@@ -198,7 +195,7 @@ class FacetGrid:
             **fig_kw,
         )
 
-        facets = self.facet_data.facets()
+        facets = self.facet_data.facets
         facet_axes = (FacetAxes.from_facet(f, axes[f.row, f.col]) for f in facets)
         self._facet_axes = FacetAxesCollection(facet_axes)
         self._selected_facet_axes = None
