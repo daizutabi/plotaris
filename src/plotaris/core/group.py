@@ -142,6 +142,9 @@ class Group:
         """Iterate over all data subgroups."""
         return iter(self.data)
 
+    def __contains__(self, dimension: str) -> bool:
+        return dimension in self.mapping
+
     def indices(self, *dimension: str | Iterable[str]) -> pl.DataFrame:
         if not dimension:
             dimension = tuple(self.mapping)
