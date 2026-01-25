@@ -105,9 +105,9 @@ def facet_data_wrapped(data: pl.DataFrame) -> FacetData:
     return FacetData(data, row="x", wrap=4)
 
 
-def test_cells(facet_data_2x3: FacetData) -> None:
+def test_coordinates(facet_data_2x3: FacetData) -> None:
     expected_cells = {(0, 0), (0, 1), (1, 1), (1, 2)}
-    assert set(facet_data_2x3.cells()) == expected_cells
+    assert set(facet_data_2x3.coordinates()) == expected_cells
 
 
 def test_data_access(facet_data_2x3: FacetData, data: pl.DataFrame) -> None:

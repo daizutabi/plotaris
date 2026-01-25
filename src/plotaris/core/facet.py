@@ -49,6 +49,7 @@ class Facet:
 
     @property
     def has_data(self) -> bool:
+        """True if this facet cell contains data."""
         return self.data is not None
 
 
@@ -56,7 +57,9 @@ class FacetCollection[T: Facet]:
     """A collection of `Facet` objects, providing methods for filtering and access."""
 
     _items: list[T]
+    """The internal list of Facet objects in the collection."""
     _lookup: dict[tuple[int, int], T]
+    """A dictionary mapping (row, col) coordinates to Facet objects for quick access."""
 
     def __init__(self, items: Iterable[T]) -> None:
         """Initialize the Collection.
@@ -72,16 +75,27 @@ class FacetCollection[T: Facet]:
         return iter(self._items)
 
     def __len__(self) -> int:
-        """Return the number of items in the collection."""
+        """Return the number of facets in the collection."""
         return len(self._items)
 
     def __contains__(self, other: Any) -> bool:
+        """Check if a facet or (row, col) tuple exists in the collection."""
         return other in self._lookup
 
     def __getitem__(self, rc: tuple[int, int]) -> T:
+        """Get a specific Facet object by its (row, col) coordinates."""
         return self._lookup[rc]
 
     def get(self, row: int, col: int) -> T | None:
+        """Get a specific Facet object by row and column, returning None if not found.
+
+        Args:
+            row: The row index of the facet.
+            col: The column index of the facet.
+
+        Returns:
+            The Facet object at (row, col), or None if no such facet exists.
+        """
         return self._lookup.get((row, col))
 
     def filter(
@@ -149,6 +163,7 @@ class FacetCollection[T: Facet]:
 
 class FacetData:
     group: Group
+    """The underlying Group object that manages the data partitioning."""
     nrows: int
     """The number of rows in the facet grid."""
     ncols: int
@@ -156,6 +171,7 @@ class FacetData:
     facets: FacetCollection[Facet]
     """A collection of all facets in the grid, including empty ones."""
     _lookup: dict[tuple[int, int], int]
+    """A mapping from (row, col) to the corresponding index in `group.data`."""
 
     def __init__(
         self,
@@ -207,12 +223,23 @@ class FacetData:
         self.facets = _create_facets(self)
 
     def index(self, row: int, col: int) -> int | None:
+        """Get the internal Group index for a specific facet cell.
+
+        Args:
+            row: The row index of the cell.
+            col: The column index of the cell.
+
+        Returns:
+            The integer index within the Group's data list, or None if the cell is empty.
+        """  # noqa: E501
         return self._lookup.get((row, col), None)
 
-    def cells(self) -> Iterator[tuple[int, int]]:
+    def coordinates(self) -> Iterator[tuple[int, int]]:
+        """Iterate over the (row, col) coordinates of all occupied cells."""
         yield from self._lookup
 
     def __getitem__(self, rc: tuple[int, int]) -> Facet:
+        """Get a specific Facet object by its (row, col) coordinates."""
         return self.facets[rc]
 
     def __iter__(self) -> Iterator[Facet]:
@@ -234,12 +261,13 @@ class FacetData:
 
 
 def _create_facets(facet_data: FacetData) -> FacetCollection[Facet]:
+    """Internal helper to create a FacetCollection from FacetData."""
     min_col_for_row: dict[int, int] = {}
     max_col_for_row: dict[int, int] = {}
     min_row_for_col: dict[int, int] = {}
     max_row_for_col: dict[int, int] = {}
 
-    for r, c in facet_data.cells():
+    for r, c in facet_data.coordinates():
         min_col_for_row[r] = min(c, min_col_for_row.get(r, c))
         max_col_for_row[r] = max(c, max_col_for_row.get(r, c))
         min_row_for_col[c] = min(r, min_row_for_col.get(c, r))
@@ -271,6 +299,7 @@ def _create_facet(
     max_col_for_row: dict[int, int],
     max_row_for_col: dict[int, int],
 ) -> Facet:
+    """Internal helper to create a single Facet object."""
     index = facet_data.index(row, col)
 
     if index is None:
