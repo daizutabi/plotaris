@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING
 
 import polars as pl
 
@@ -85,37 +85,50 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
     )
 
 
+def _index_name(dimension: str | None = None, /) -> str:
+    """Get the internal column name for a dimension's integer index."""
+    if dimension:
+        return f"_{dimension}_index"
+    return "^_.*_index$"
+
+
+def _flatten(*values: str | Iterable[str]) -> Iterator[str]:
+    for value in values:
+        if isinstance(value, str):
+            yield value
+        else:
+            yield from value
+
+
 class Group:
-    index: pl.DataFrame
+    mapping: dict[str, tuple[str, ...]]
+    """A mapping from dimension names (e.g., "row", "col") to a tuple of column names."""  # noqa: E501
+    data: list[pl.DataFrame]
+    """A list of DataFrames, where each DataFrame is a subgroup of the original data."""
+
+    _index: pl.DataFrame
     """A DataFrame where each row corresponds to a data group.
 
     It contains the original group keys (actual values from the DataFrame columns)
     and their corresponding integer indices for each dimension (e.g., "_row_index",
     "_col_index").
     """
-    mapping: dict[str, tuple[str, ...]]
-    """A mapping from dimension names (e.g., "row", "col") to a tuple of column names."""  # noqa: E501
-    data: list[pl.DataFrame]
-    """A list of DataFrames, where each DataFrame is a subgroup of the original data."""
 
     def __init__(self, data: pl.DataFrame, **columns: str | Iterable[str]) -> None:
         self.mapping = {dim: to_tuple(cols) for dim, cols in columns.items()}
 
         if data.is_empty():
-            self.index = pl.DataFrame({n: [] for n in self.mapping})
+            schema = [_index_name(d) for d in self.mapping]
+            self._index = pl.DataFrame(schema=schema)
             self.data = []
             return
 
         index, self.data = group_by(data, *self.mapping.values())
 
         for dim, cols in self.mapping.items():
-            index = with_index(index, cols, self._get_index_column(dim))
+            index = with_index(index, cols, _index_name(dim))
 
-        self.index = index
-
-    def _get_index_column(self, dimension: str, /) -> str:
-        """Get the internal column name for a dimension's integer index."""
-        return f"_{dimension}_index"
+        self._index = index
 
     def __getitem__(self, index: int) -> pl.DataFrame:
         """Get the data subgroup at a given index."""
@@ -129,166 +142,20 @@ class Group:
         """Iterate over all data subgroups."""
         return iter(self.data)
 
-    def n_unique(self, dimension: str, /) -> int:
-        """Get the number of unique values for a given dimension.
+    def indices(self, *dimension: str | Iterable[str]) -> pl.DataFrame:
+        if not dimension:
+            dimension = tuple(self.mapping)
 
-        Args:
-            dimension: The name of the dimension (e.g., "row", "col").
+        named = {d: _index_name(d) for d in _flatten(*dimension)}
+        return self._index.select(**named)
 
-        Returns:
-            The number of unique values in the dimension.
-        """
-        return self.index[self._get_index_column(dimension)].n_unique()
+    def keys(self, *dimension: str | Iterable[str]) -> pl.DataFrame:
+        if not dimension:
+            return self._index.select(pl.exclude(_index_name()))
 
-    @overload
-    def item(
-        self,
-        index: int,
-        dimension: str,
-        *,
-        named: Literal[False] = ...,
-    ) -> tuple[Any, ...]: ...
+        cs = [self.mapping[d] for d in _flatten(*dimension)]
+        columns = sorted(set(chain.from_iterable(cs)))
+        return self._index.select(columns)
 
-    @overload
-    def item(
-        self,
-        index: int,
-        dimension: str,
-        *,
-        named: Literal[True],
-    ) -> dict[str, Any]: ...
-
-    def item(
-        self,
-        index: int,
-        dimension: str,
-        *,
-        named: bool = False,
-    ) -> tuple[Any, ...] | dict[str, Any]:
-        """Get the actual value(s) for a given dimension of a specific group.
-
-        Args:
-            index: The integer index of the subgroup.
-            dimension: The name of the dimension (e.g., "row", "col").
-            named: If True, return a dictionary mapping column names to values.
-                Otherwise, return a tuple of values.
-
-        Returns:
-            A tuple or dictionary containing the value(s) for the dimension.
-        """
-        if columns := self.mapping[dimension]:
-            return self.index.select(columns).row(index, named=named)
-        return {} if named else ()
-
-    @overload
-    def items(
-        self,
-        dimension: str,
-        *,
-        named: Literal[False] = ...,
-    ) -> list[tuple[Any, ...]]: ...
-
-    @overload
-    def items(
-        self,
-        dimension: str,
-        *,
-        named: Literal[True],
-    ) -> list[dict[str, Any]]: ...
-
-    def items(
-        self,
-        dimension: str,
-        *,
-        named: bool = False,
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
-        """Get the actual value(s) for a given dimension across all groups.
-
-        Args:
-            dimension: The name of the dimension (e.g., "row", "col").
-            named: If True, return a list of dictionaries. Otherwise, return
-                a list of tuples.
-
-        Returns:
-            A list of tuples or dictionaries for the dimension's values.
-        """
-        if named:
-            return [self.item(i, dimension, named=True) for i in range(len(self))]
-
-        return [self.item(i, dimension, named=False) for i in range(len(self))]
-
-    @overload
-    def dimension(
-        self,
-        index: int,
-        *,
-        named: Literal[False] = ...,
-    ) -> dict[str, tuple[Any, ...]]: ...
-
-    @overload
-    def dimension(
-        self,
-        index: int,
-        *,
-        named: Literal[True],
-    ) -> dict[str, dict[str, Any]]: ...
-
-    def dimension(
-        self,
-        index: int,
-        *,
-        named: bool = False,
-    ) -> dict[str, tuple[Any, ...]] | dict[str, dict[str, Any]]:
-        """Get the actual value(s) for all dimensions of a specific group.
-
-        This returns a dictionary mapping each dimension name to its corresponding
-        value(s) for the group at the given index.
-
-        Args:
-            index: The integer index of the subgroup.
-            named: If True, the values in the returned dictionary will also be
-                dictionaries. Otherwise, they will be tuples.
-
-        Returns:
-            A dictionary mapping dimension names to their values.
-        """
-        if named:
-            return {n: self.item(index, n, named=True) for n in self.mapping}
-
-        return {n: self.item(index, n, named=False) for n in self.mapping}
-
-    @overload
-    def dimensions(
-        self,
-        *,
-        named: Literal[False] = ...,
-    ) -> list[dict[str, tuple[Any, ...]]]: ...
-
-    @overload
-    def dimensions(
-        self,
-        *,
-        named: Literal[True],
-    ) -> list[dict[str, dict[str, Any]]]: ...
-
-    def dimensions(
-        self,
-        *,
-        named: bool = False,
-    ) -> list[dict[str, tuple[Any, ...]]] | list[dict[str, dict[str, Any]]]:
-        """Get the actual value(s) for all dimensions across all groups.
-
-        This is equivalent to calling `dimension()` for each group in a loop.
-
-        Args:
-            named: If True, the values in the returned dictionaries will also be
-                dictionaries. Otherwise, they will be tuples.
-
-        Returns:
-            A list of dictionaries, where each dictionary represents a group's
-            dimensional values.
-        """
-        if named:
-            return [self.dimension(i, named=True) for i in range(len(self))]
-
-        return [self.dimension(i, named=False) for i in range(len(self))]
+    def dimension_keys(self) -> dict[str, pl.DataFrame]:
+        return {dim: self.keys(dim) for dim in self.mapping}
