@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Self, cast
-
-import polars as pl
+from typing import TYPE_CHECKING, Any, Self
 
 from .group import Group
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
+    import polars as pl
+
 
 @dataclass(frozen=True)
 class Facet:
     """Represent a single cell in the facet grid, which may or may not contain data."""
 
+    data: pl.DataFrame | None
+    """The DataFrame subset for this facet, or `None` if the facet is empty."""
     row: int
     """The row index of the facet cell."""
     col: int
@@ -35,8 +37,6 @@ class Facet:
     """True if the cell is the rightmost occupied cell in its row."""
     is_bottommost: bool
     """True if the cell is the bottommost occupied cell in its column."""
-    data: pl.DataFrame | None
-    """The DataFrame subset for this facet, or `None` if the facet is empty."""
     row_label: dict[str, Any]
     """The label for the row dimension."""
     col_label: dict[str, Any]
@@ -77,6 +77,9 @@ class FacetCollection[T: Facet]:
 
     def __contains__(self, other: Any) -> bool:
         return other in self._lookup
+
+    def __getitem__(self, rc: tuple[int, int]) -> T:
+        return self._lookup[rc]
 
     def get(self, row: int, col: int) -> T | None:
         return self._lookup.get((row, col))
@@ -145,23 +148,14 @@ class FacetCollection[T: Facet]:
 
 
 class FacetData:
-    """A specialized `GroupedData` for creating 2D facet grids.
-
-    This class manages the mapping of data to a grid of subplots defined by
-    row and column variables. It also handles wrapping a 1D facet layout
-    into a 2D grid.
-    """
-
     group: Group
     nrows: int
     """The number of rows in the facet grid."""
     ncols: int
     """The number of columns in the facet grid."""
+    facets: FacetCollection[Facet]
+    """A collection of all facets in the grid, including empty ones."""
     _lookup: dict[tuple[int, int], int]
-    _min_col_for_row: dict[int, int]
-    _max_col_for_row: dict[int, int]
-    _min_row_for_col: dict[int, int]
-    _max_row_for_col: dict[int, int]
 
     def __init__(
         self,
@@ -179,90 +173,53 @@ class FacetData:
             wrap: If provided, wraps a 1D facet grid (defined by `row` or
                 `col`) into a 2D grid with this many columns.
         """
-        group = Group(data, row=row or (), col=col or ())
+        if row and col:
+            self.group = Group(data, row=row, col=col)
+            idx = self.group.indices("row", "col")
+            irows = enumerate(idx.rows())
+            self._lookup = {(r, c): i for i, (r, c) in irows}
 
-        if row and wrap:
-            group.index = group.index.with_columns(
-                (pl.col("row") % wrap).alias("row"),
-                (pl.col("row") // wrap).alias("col"),
-            )
+        elif row and not col:
+            self.group = Group(data, row=row)
+            idx = self.group.indices("row")
+            irows = enumerate(idx.rows())
+            if wrap:
+                self._lookup = {divmod(r, wrap)[::-1]: i for i, (r,) in irows}
+            else:
+                self._lookup = {(r, 0): i for i, (r,) in irows}
 
-        elif col and wrap:
-            group.index = group.index.with_columns(
-                (pl.col("col") // wrap).alias("row"),
-                (pl.col("col") % wrap).alias("col"),
-            )
+        elif col and not row:
+            self.group = Group(data, col=col)
+            idx = self.group.indices("col")
+            irows = enumerate(idx.rows())
+            if wrap:
+                self._lookup = {divmod(c, wrap): i for i, (c,) in irows}
+            else:
+                self._lookup = {(0, c): i for i, (c,) in irows}
 
-        self.group = group
-        self.nrows = self.group.n_unique("row") or 1
-        self.ncols = self.group.n_unique("col") or 1
-
-        it = enumerate(self.group.index.rows())
-        self._lookup = {(cast("int", r), cast("int", c)): i for i, (r, c) in it}
-
-        self._min_col_for_row = {}
-        self._max_col_for_row = {}
-        self._min_row_for_col = {}
-        self._max_row_for_col = {}
-
-        for r, c in self._lookup:
-            self._min_col_for_row[r] = min(c, self._min_col_for_row.get(r, c))
-            self._max_col_for_row[r] = max(c, self._max_col_for_row.get(r, c))
-            self._min_row_for_col[c] = min(r, self._min_row_for_col.get(c, r))
-            self._max_row_for_col[c] = max(r, self._max_row_for_col.get(c, r))
-
-    def facet(self, row: int, col: int) -> Facet:
-        """Get a `Facet` object for the specified grid coordinates.
-
-        Args:
-            row: The row index of the cell.
-            col: The column index of the cell.
-
-        Returns:
-            A `Facet` instance with metadata for the specified location.
-        """
-        if (row, col) in self._lookup:
-            index = self._lookup[row, col]
-            data = self.group[index]
-            labels = self.group.dimension(index, named=True)
-            row_label = labels["row"]
-            col_label = labels["col"]
         else:
-            data = None
-            row_label = {}
-            col_label = {}
+            self.group = Group(data)
+            self._lookup = {(0, 0): 0}
 
-        return Facet(
-            row,
-            col,
-            is_left=(col == 0),
-            is_top=(row == 0),
-            is_right=(col == self.ncols - 1),
-            is_bottom=(row == self.nrows - 1),
-            is_leftmost=self._min_col_for_row.get(row) == col,
-            is_topmost=self._min_row_for_col.get(col) == row,
-            is_rightmost=self._max_col_for_row.get(row) == col,
-            is_bottommost=self._max_row_for_col.get(col) == row,
-            data=data,
-            row_label=row_label,
-            col_label=col_label,
-        )
+        self.nrows = max(r for (r, _) in self._lookup) + 1
+        self.ncols = max(c for (_, c) in self._lookup) + 1
 
-    def facets(self) -> FacetCollection[Facet]:
-        """Get a collection of all facets in the grid, including empty ones.
+        self.facets = _create_facets(self)
 
-        Returns:
-            A `FacetCollection` containing a `Facet` object for every
-            position in the grid.
-        """
-        items = [self.facet(r, c) for r in range(self.nrows) for c in range(self.ncols)]
-        return FacetCollection(items)
+    def index(self, row: int, col: int) -> int | None:
+        return self._lookup.get((row, col), None)
+
+    def cells(self) -> Iterator[tuple[int, int]]:
+        yield from self._lookup
+
+    def __getitem__(self, rc: tuple[int, int]) -> Facet:
+        return self.facets[rc]
 
     def __iter__(self) -> Iterator[Facet]:
         """Iterate over all facets in the grid."""
-        yield from self.facets()
+        yield from self.facets
 
-    def get(self, row: int, col: int) -> pl.DataFrame | None:
+    def data(self, row: int, col: int) -> pl.DataFrame | None:
         """Get the DataFrame for a specific cell.
 
         Args:
@@ -273,4 +230,79 @@ class FacetData:
             The DataFrame corresponding to the cell at (row, col), or `None`
             if the cell is empty.
         """
-        return self.facet(row, col).data
+        return self[row, col].data
+
+
+def _create_facets(facet_data: FacetData) -> FacetCollection[Facet]:
+    min_col_for_row: dict[int, int] = {}
+    max_col_for_row: dict[int, int] = {}
+    min_row_for_col: dict[int, int] = {}
+    max_row_for_col: dict[int, int] = {}
+
+    for r, c in facet_data.cells():
+        min_col_for_row[r] = min(c, min_col_for_row.get(r, c))
+        max_col_for_row[r] = max(c, max_col_for_row.get(r, c))
+        min_row_for_col[c] = min(r, min_row_for_col.get(c, r))
+        max_row_for_col[c] = max(r, max_row_for_col.get(c, r))
+
+    facets = [
+        _create_facet(
+            facet_data,
+            row,
+            col,
+            min_col_for_row,
+            min_row_for_col,
+            max_col_for_row,
+            max_row_for_col,
+        )
+        for row in range(facet_data.nrows)
+        for col in range(facet_data.ncols)
+    ]
+
+    return FacetCollection(facets)
+
+
+def _create_facet(
+    facet_data: FacetData,
+    row: int,
+    col: int,
+    min_col_for_row: dict[int, int],
+    min_row_for_col: dict[int, int],
+    max_col_for_row: dict[int, int],
+    max_row_for_col: dict[int, int],
+) -> Facet:
+    index = facet_data.index(row, col)
+
+    if index is None:
+        data = None
+        row_label = {}
+        col_label = {}
+
+    else:
+        data = facet_data.group[index]
+
+        if "row" in facet_data.group:
+            row_label = facet_data.group.keys("row").row(index, named=True)
+        else:
+            row_label = {}
+
+        if "col" in facet_data.group:
+            col_label = facet_data.group.keys("col").row(index, named=True)
+        else:
+            col_label = {}
+
+    return Facet(
+        data,
+        row,
+        col,
+        is_left=(col == 0),
+        is_top=(row == 0),
+        is_right=(col == facet_data.ncols - 1),
+        is_bottom=(row == facet_data.nrows - 1),
+        is_leftmost=min_col_for_row.get(row) == col,
+        is_topmost=min_row_for_col.get(col) == row,
+        is_rightmost=max_col_for_row.get(row) == col,
+        is_bottommost=max_row_for_col.get(col) == row,
+        row_label=row_label,
+        col_label=col_label,
+    )
