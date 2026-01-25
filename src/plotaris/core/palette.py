@@ -11,8 +11,10 @@ if TYPE_CHECKING:
     import polars as pl
 
 
-type Property = str | int | float
-type MappingProperty = Mapping[tuple[Any, ...], Property]
+type VisualValue = str | int | float
+"""Type alias for values that can be assigned to visual properties."""
+type MappingVisualValue = Mapping[tuple[Any, ...], VisualValue]
+"""Type alias for a mapping from data values (tuple) to a visual value."""
 
 COLORS = [
     "#d42f7e",
@@ -30,11 +32,17 @@ SHAPES = ["o", "s", "^", "D", "v"]
 
 @dataclass(frozen=True)
 class Palette:
+    """Manages the mapping of data values to visual properties."""
+
     color: tuple[str, ...] = field(default_factory=tuple)
+    """Column(s) from the DataFrame used to determine color assignments."""
     size: tuple[str, ...] = field(default_factory=tuple)
+    """Column(s) from the DataFrame used to determine size assignments."""
     shape: tuple[str, ...] = field(default_factory=tuple)
+    """Column(s) from the DataFrame used to determine shape assignments."""
 
     def items(self) -> Iterator[tuple[str, tuple[str, ...]]]:
+        """Iterate over the visual properties and their associated column names."""
         for f in fields(self):
             if value := getattr(self, f.name):
                 yield f.name, value
@@ -42,10 +50,10 @@ class Palette:
     def build(
         self,
         data: pl.DataFrame,
-        color: Sequence[Property] | MappingProperty | None = None,
-        size: Sequence[Property] | MappingProperty | None = None,
-        shape: Sequence[Property] | MappingProperty | None = None,
-    ) -> dict[str, MappingProperty]:
+        color: Sequence[VisualValue] | MappingVisualValue | None = None,
+        size: Sequence[VisualValue] | MappingVisualValue | None = None,
+        shape: Sequence[VisualValue] | MappingVisualValue | None = None,
+    ) -> dict[str, MappingVisualValue]:
         """Create palettes (ordered lists of visual properties) for all aesthetics."""
         palette_default = {
             "color": (color, COLORS),
@@ -53,7 +61,7 @@ class Palette:
             "shape": (shape, SHAPES),
         }
 
-        palettes: dict[str, MappingProperty] = {}
+        palettes: dict[str, MappingVisualValue] = {}
 
         for name, columns in self.items():
             palette, default = palette_default[name]
@@ -64,10 +72,10 @@ class Palette:
     def get(
         self,
         row: Mapping[str, Any],
-        palettes: dict[str, MappingProperty],
-    ) -> dict[str, Property]:
+        palettes: dict[str, MappingVisualValue],
+    ) -> dict[str, VisualValue]:
         """Get the visual properties based on the encoding."""
-        properties: dict[str, Property] = {}
+        properties: dict[str, VisualValue] = {}
 
         for name, columns in self.items():
             if palette := palettes.get(name):
