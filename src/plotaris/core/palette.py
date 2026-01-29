@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from itertools import cycle
 from typing import TYPE_CHECKING, Any, Self
 
 from plotaris.utils import to_tuple
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
 
     import polars as pl
 
@@ -45,16 +46,47 @@ class Base:
         self._palettes = palettes
         return self
 
-    def get(self, data: Mapping[str, Any], /) -> dict[str, VisualValue | None]:
-        """Get the visual properties based on the encoding."""
+    def get(
+        self,
+        data: Mapping[str, Any] | pl.DataFrame,
+        /,
+    ) -> dict[str, VisualValue | None]:
+        """Get the visual properties based on the encoding.
+
+        Args:
+            data: A single row (as a Mapping) or a subset of a DataFrame.
+                If a DataFrame is provided, it must contain only one unique
+                combination of values for the columns that define the palette.
+        """
         properties: dict[str, VisualValue | None] = {}
 
         for name, columns in self.columns.items():
             palette = self._palettes[name]
-            values = tuple(data[c] for c in columns)
-            properties[name] = palette.get(values)
+            key = _get_palette_key(data, columns)
+            properties[name] = palette.get(key)
 
         return properties
+
+
+def _get_palette_key(
+    data: Mapping[str, Any] | pl.DataFrame,
+    columns: Iterable[str],
+) -> tuple[Any, ...]:
+    """Get the key for palette lookup from a row or a DataFrame.
+
+    - If data is a Mapping (a single row), the key is the tuple of its values.
+    - If data is a DataFrame and contains a single unique combination of values
+      for the given columns, the key is that unique tuple.
+    - Otherwise, returns an empty tuple.
+    """
+    if isinstance(data, Mapping):
+        return tuple(data[c] for c in columns)
+
+    unique_rows = data.select(columns).unique()
+    if len(unique_rows) == 1:
+        return tuple(unique_rows.row(0))
+
+    return ()
 
 
 def create_palette[T](

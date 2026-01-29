@@ -3,7 +3,7 @@ from __future__ import annotations
 import polars as pl
 import pytest
 
-from plotaris.core.palette import Base, create_palette
+from plotaris.core.palette import Base, Palette, create_palette
 
 
 @pytest.fixture(scope="module")
@@ -106,3 +106,25 @@ def test_base_mapping(
         .get(data.row(index, named=True))
     )
     assert result == {"color": color, "size": None, "shape": shape}
+
+
+@pytest.mark.parametrize(
+    ("start", "stop", "color"),
+    [(0, 0, None), (0, 1, 10), (0, 3, 10), (0, 4, None), (3, 4, 20)],
+)
+def test_base_get_by_dataframe(
+    base: Base,
+    data: pl.DataFrame,
+    start: int,
+    stop: int,
+    color: int | None,
+) -> None:
+    base = Base(color="b").default(color=[10, 20]).set(data)
+    assert base.get(data[start:stop]) == {"color": color}
+
+
+def test_palette(data: pl.DataFrame) -> None:
+    palette = Palette("a", ("a", "b"))
+    assert palette.columns == {"color": ("a",), "size": ("a", "b")}
+    result = palette.set(data).get(data.row(0, named=True))
+    assert result == {"color": "#d42f7e", "size": 50}
