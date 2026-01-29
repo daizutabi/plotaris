@@ -38,6 +38,7 @@ dev = [
   "pytest-xdist>=3.8.0",
   "ruff>=0.14.10",
   "ty>=0.0.4",
+  "watchdog>=6.0.0",
 ]
 
 [tool.pytest]
@@ -59,7 +60,7 @@ include = ["src/**/*.py", "tests/**/*.py"]
 [tool.ruff.lint]
 select = ["ALL"]
 unfixable = ["F401"]
-ignore = ["ANN401", "ARG001", "C901", "D", "ERA001", "PLR0913"]
+ignore = ["ANN401", "ARG001", "C901", "D", "ERA001", "PLR0913", "PLR2004"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
