@@ -13,47 +13,34 @@ if TYPE_CHECKING:
 type VisualValue = str | int | float
 """Type alias for values that can be assigned to visual properties."""
 
-COLORS = [
-    "#d42f7e",
-    "#7c388c",
-    "#1952a6",
-    "#54a9cc",
-    "#318c3a",
-    "#f2ce00",
-    "#e6820b",
-    "#cf1111",
-]
-SIZES = [50, 100, 150, 200, 250]
-SHAPES = ["o", "s", "^", "D", "v"]
-
 
 class Palette:
     columns: dict[str, tuple[str, ...]]
-    _mapping: dict[str, dict[tuple[Any, ...], VisualValue]]
     _default: dict[str, list[VisualValue]]
+    _mapping: dict[str, dict[tuple[Any, ...], VisualValue]]
     _palettes: dict[str, dict[tuple[Any, ...], VisualValue | None]]
 
-    def __init__(self, /, **columns: str | Iterable[str]) -> None:
-        self.columns = {k: to_tuple(v) for k, v in columns.items()}
+    def __init__(self, /, **columns: str | Iterable[str] | None) -> None:
+        self.columns = {k: to_tuple(v) for k, v in columns.items() if v is not None}
         self._mapping = {}
         self._default = {}
         self._palettes = {}
 
-    def mapping(self, /, **mapping: Mapping[tuple[Any, ...], VisualValue]) -> Self:
-        self._mapping = {k: dict(v) for k, v in mapping.items()}
+    def default(self, /, **default: Iterable[VisualValue] | None) -> Self:
+        self._default = {k: list(v) for k, v in default.items() if v is not None}
         return self
 
-    def default(self, /, **default: Iterable[VisualValue]) -> Self:
-        self._default = {k: list(v) for k, v in default.items()}
+    def mapping(self, /, **mapping: Mapping[tuple[Any, ...], VisualValue]) -> Self:
+        self._mapping = {k: dict(v) for k, v in mapping.items()}
         return self
 
     def set(self, data: pl.DataFrame, /) -> Self:
         palettes: dict[str, dict[tuple[Any, ...], VisualValue | None]] = {}
 
         for name, columns in self.columns.items():
-            mapping = self._mapping.get(name, {})
             default = self._default.get(name, [])
-            palettes[name] = create_palette(data, columns, mapping, default)
+            mapping = self._mapping.get(name, {})
+            palettes[name] = create_palette(data, columns, default, mapping)
 
         self._palettes = palettes
         return self
@@ -73,8 +60,8 @@ class Palette:
 def create_palette[T](
     data: pl.DataFrame,
     columns: Iterable[str],
-    mapping: Mapping[tuple[Any, ...], T],
     default: Sequence[T],
+    mapping: Mapping[tuple[Any, ...], T],
 ) -> dict[tuple[Any, ...], T | None]:
     rows = data.select(columns).unique(maintain_order=True).rows()
 
@@ -82,6 +69,35 @@ def create_palette[T](
 
     if mapping:
         defaults = cycle(default_)
-        return {row: mapping.get(row, next(defaults)) for row in rows}  # ty: ignore[no-matching-overload]
+        return {row: mapping.get(row, next(defaults)) for row in rows}
 
     return dict(zip(rows, cycle(default_)))
+
+
+COLORS = [
+    "#d42f7e",
+    "#7c388c",
+    "#1952a6",
+    "#54a9cc",
+    "#318c3a",
+    "#f2ce00",
+    "#e6820b",
+    "#cf1111",
+]
+SIZES = [50, 100, 150, 200, 250]
+SHAPES = ["o", "s", "^", "D", "v"]
+
+
+class DefaultPalette(Palette):
+    def __init__(
+        self,
+        color: str | Iterable[str] | None = None,
+        size: str | Iterable[str] | None = None,
+        shape: str | Iterable[str] | None = None,
+    ) -> None:
+        super().__init__(color=color, size=size, shape=shape)
+        self.default(
+            color=color and COLORS,
+            size=size and SIZES,
+            shape=shape and SHAPES,
+        )

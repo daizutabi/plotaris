@@ -19,30 +19,30 @@ def data() -> pl.DataFrame:
 
 def test_create_palette(data: pl.DataFrame) -> None:
     mapping = {("A",): 1, ("B",): 2}
-    result = create_palette(data, ("a",), mapping, [10, 20, 30])
+    result = create_palette(data, ("a",), [10, 20, 30], mapping)
     assert result == {("A",): 1, ("B",): 2, ("C",): 30}
 
 
 def test_create_palette_empty(data: pl.DataFrame) -> None:
     mapping: dict[tuple[str, ...], int] = {}
-    result = create_palette(data, ("a",), mapping, [])
+    result = create_palette(data, ("a",), [], mapping)
     assert result == {("A",): None, ("B",): None, ("C",): None}
 
 
 def test_create_palette_mapping_empty(data: pl.DataFrame) -> None:
-    result = create_palette(data, ("a",), {}, [1, 2])
+    result = create_palette(data, ("a",), [1, 2], {})
     assert result == {("A",): 1, ("B",): 2, ("C",): 1}
 
 
 def test_create_palette_default_empty(data: pl.DataFrame) -> None:
     mapping = {("A",): 10, ("B",): 20}
-    result = create_palette(data, ("a",), mapping, [])
+    result = create_palette(data, ("a",), [], mapping)
     assert result == {("A",): 10, ("B",): 20, ("C",): None}
 
 
 @pytest.fixture
 def palette() -> Palette:
-    return Palette(color="a", size=("a", "b"), shape="value")
+    return Palette(color="a", size=("a", "b"), shape="value", invalid=None)
 
 
 @pytest.mark.parametrize(
