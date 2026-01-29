@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import pytest
 
-from plotaris.axis import format_axes, format_axis, set_axes_log
+from plotaris.axis import axes_text, format_axes, format_axis, set_axes_log
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -64,3 +64,29 @@ def test_set_axes_log(ax: Axes) -> None:
     assert ticks == ["100p", "1n", "10n", "100n", "1µ", "10µ", "100µ"]
     ticks = [x.get_text() for x in ax.yaxis.get_majorticklabels()]
     assert ticks == ["10", "100", "1k", "10k", "100k", "1M", "10M"]
+
+
+@pytest.mark.parametrize(
+    "x, y, lim, expected_ha, expected_va",
+    [
+        (0.1, 0.5, 0.2, "left", "center"),
+        (0.9, 0.5, 0.2, "right", "center"),
+        (0.5, 0.5, 0.2, "center", "center"),
+        (0.5, 0.1, 0.2, "center", "bottom"),
+        (0.5, 0.9, 0.2, "center", "top"),
+        (0.1, 0.1, 0.2, "left", "bottom"),
+        (0.9, 0.9, 0.2, "right", "top"),
+        (0.3, 0.5, 0.4, "left", "center"),
+    ],
+)
+def test_axes_text_alignment(
+    ax: Axes,
+    x: float,
+    y: float,
+    lim: float,
+    expected_ha: str,
+    expected_va: str,
+) -> None:
+    text = axes_text(ax, x, y, "test", lim=lim)
+    assert text.get_horizontalalignment() == expected_ha
+    assert text.get_verticalalignment() == expected_va
