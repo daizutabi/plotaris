@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from matplotlib.text import Text
 
 
-def sep_unit(label: str) -> Literal["(", "["] | None:
+def _sep_unit(label: str) -> Literal["(", "["] | None:
     if "(" in label and label.endswith(")"):
         return "("
     if "[" in label and label.endswith("]"):
@@ -19,8 +19,8 @@ def sep_unit(label: str) -> Literal["(", "["] | None:
     return None
 
 
-def split_places(label: str) -> tuple[str, int]:
-    sep = sep_unit(label)
+def _split_places(label: str) -> tuple[str, int]:
+    sep = _sep_unit(label)
 
     if not sep:
         return label, 0
@@ -36,7 +36,7 @@ def split_places(label: str) -> tuple[str, int]:
     return f"{label}{suffix}", int(places)
 
 
-def get_power(unit: str) -> int:
+def _get_power(unit: str) -> int:
     if len(unit) == 1:
         return 0
 
@@ -56,15 +56,15 @@ def format_axis(
     fontdict: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Text:
-    label, places = split_places(label)
+    label, places = _split_places(label)
     text = axis.set_label_text(label, fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
-    if not (sep := sep_unit(label)):
+    if not (sep := _sep_unit(label)):
         return text
 
     _, unit = label.rsplit(sep, 1)
 
-    if power := get_power(unit):
+    if power := _get_power(unit):
         func = FuncFormatter(lambda x, _: f"{x / 10**power:.{places}f}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
         axis.set_major_formatter(func)
 

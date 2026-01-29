@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import pytest
 
-from plotaris.axis import axes_text, format_axes, format_axis, set_axes_log
+from plotaris.axes import axes_text, format_axes, format_axis, set_axes_log
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

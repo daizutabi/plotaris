@@ -6,7 +6,7 @@ app = marimo.App(width="medium")
 with app.setup:
     import matplotlib.pyplot as plt
 
-    from plotaris.axis import axes_text, format_axes, format_axis, set_axes_log
+    from plotaris.axes import axes_text, format_axes, format_axis, set_axes_log
 
     plt.style.use(["default", "matplotlibrc"])
 
