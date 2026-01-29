@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass, field, fields
 from itertools import cycle
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
+
+from plotaris.utils import to_tuple
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     import polars as pl
 
-
 type VisualValue = str | int | float
 """Type alias for values that can be assigned to visual properties."""
-type MappingVisualValue = Mapping[tuple[Any, ...], VisualValue]
-"""Type alias for a mapping from data values (tuple) to a visual value."""
 
 COLORS = [
     "#d42f7e",
@@ -30,58 +27,45 @@ SIZES = [50, 100, 150, 200, 250]
 SHAPES = ["o", "s", "^", "D", "v"]
 
 
-@dataclass(frozen=True)
 class Palette:
-    """Manages the mapping of data values to visual properties."""
+    columns: dict[str, tuple[str, ...]]
+    _mapping: dict[str, dict[tuple[Any, ...], VisualValue]]
+    _default: dict[str, list[VisualValue]]
+    _palettes: dict[str, dict[tuple[Any, ...], VisualValue | None]]
 
-    color: tuple[str, ...] = field(default_factory=tuple)
-    """Column(s) from the DataFrame used to determine color assignments."""
-    size: tuple[str, ...] = field(default_factory=tuple)
-    """Column(s) from the DataFrame used to determine size assignments."""
-    shape: tuple[str, ...] = field(default_factory=tuple)
-    """Column(s) from the DataFrame used to determine shape assignments."""
+    def __init__(self, /, **columns: str | Iterable[str]) -> None:
+        self.columns = {k: to_tuple(v) for k, v in columns.items()}
+        self._mapping = {}
+        self._default = {}
+        self._palettes = {}
 
-    def items(self) -> Iterator[tuple[str, tuple[str, ...]]]:
-        """Iterate over the visual properties and their associated column names."""
-        for f in fields(self):
-            if value := getattr(self, f.name):
-                yield f.name, value
+    def mapping(self, /, **mapping: Mapping[tuple[Any, ...], VisualValue]) -> Self:
+        self._mapping = {k: dict(v) for k, v in mapping.items()}
+        return self
 
-    def build(
-        self,
-        data: pl.DataFrame,
-        color: Sequence[VisualValue] | MappingVisualValue | None = None,
-        size: Sequence[VisualValue] | MappingVisualValue | None = None,
-        shape: Sequence[VisualValue] | MappingVisualValue | None = None,
-    ) -> dict[str, MappingVisualValue]:
-        """Create palettes (ordered lists of visual properties) for all aesthetics."""
-        palette_default = {
-            "color": (color, COLORS),
-            "size": (size, SIZES),
-            "shape": (shape, SHAPES),
-        }
+    def default(self, /, **default: Iterable[VisualValue]) -> Self:
+        self._default = {k: list(v) for k, v in default.items()}
+        return self
 
-        palettes: dict[str, MappingVisualValue] = {}
+    def set(self, data: pl.DataFrame, /) -> Self:
+        palettes: dict[str, dict[tuple[Any, ...], VisualValue | None]] = {}
 
-        for name, columns in self.items():
-            palette, default = palette_default[name]
-            palettes[name] = create_palette(data, columns, palette, default)
+        for name, columns in self.columns.items():
+            mapping = self._mapping.get(name, {})
+            default = self._default.get(name, [])
+            palettes[name] = create_palette(data, columns, mapping, default)
 
-        return palettes
+        self._palettes = palettes
+        return self
 
-    def get(
-        self,
-        row: Mapping[str, Any],
-        palettes: dict[str, MappingVisualValue],
-    ) -> dict[str, VisualValue]:
+    def get(self, data: Mapping[str, Any], /) -> dict[str, VisualValue | None]:
         """Get the visual properties based on the encoding."""
-        properties: dict[str, VisualValue] = {}
+        properties: dict[str, VisualValue | None] = {}
 
-        for name, columns in self.items():
-            if palette := palettes.get(name):
-                values = tuple(row[c] for c in columns)
-                if value := palette.get(values):
-                    properties[name] = value
+        for name, columns in self.columns.items():
+            palette = self._palettes[name]
+            values = tuple(data[c] for c in columns)
+            properties[name] = palette.get(values)
 
         return properties
 
@@ -89,14 +73,15 @@ class Palette:
 def create_palette[T](
     data: pl.DataFrame,
     columns: Iterable[str],
-    palette: Sequence[T] | Mapping[tuple[Any, ...], T] | None,
+    mapping: Mapping[tuple[Any, ...], T],
     default: Sequence[T],
-) -> dict[tuple[Any, ...], T]:
-    """Create an ordered palette of visual properties corresponding to unique data values."""  # noqa: E501
+) -> dict[tuple[Any, ...], T | None]:
     rows = data.select(columns).unique(maintain_order=True).rows()
 
-    if isinstance(palette, Mapping):
-        defaults = cycle(default)
-        return {row: palette.get(row, next(defaults)) for row in rows}  # ty: ignore[no-matching-overload]
+    default_ = default or [None]
 
-    return dict(zip(rows, cycle(palette or default)))
+    if mapping:
+        defaults = cycle(default_)
+        return {row: mapping.get(row, next(defaults)) for row in rows}  # ty: ignore[no-matching-overload]
+
+    return dict(zip(rows, cycle(default_)))

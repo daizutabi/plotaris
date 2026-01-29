@@ -1,91 +1,109 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 import pytest
 
-from plotaris.core.palette import SIZES, Palette, create_palette
-
-if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
+from plotaris.core.palette import Palette, create_palette
 
 
 @pytest.fixture(scope="module")
-def df() -> pl.DataFrame:
+def data() -> pl.DataFrame:
     data = {
         "a": ["A", "B", "C", "A", "B", "C"],
         "b": [1, 1, 1, 2, 2, 2],
-        "value": [10, 20, 30, 15, 25, 35],
+        "value": [10, 20, 10, 20, 10, 30],
     }
 
     return pl.DataFrame(data)
 
 
-def test_create_palette_list(df: pl.DataFrame) -> None:
-    result = create_palette(
-        df,
-        ("a",),
-        [1, 2, 3],
-        [1, 2, 3],
-    )
-    expected = {("A",): 1, ("B",): 2, ("C",): 3}
-    assert result == expected
+def test_create_palette(data: pl.DataFrame) -> None:
+    mapping = {("A",): 1, ("B",): 2}
+    result = create_palette(data, ("a",), mapping, [10, 20, 30])
+    assert result == {("A",): 1, ("B",): 2, ("C",): 30}
 
 
-def test_create_palette_dict(df: pl.DataFrame) -> None:
-    result = create_palette(
-        df,
-        ("a",),
-        {("A",): 10, ("B",): 20},
-        [1, 2],
-    )
-    expected = {("A",): 10, ("B",): 20, ("C",): 1}
-    assert result == expected
+def test_create_palette_empty(data: pl.DataFrame) -> None:
+    mapping: dict[tuple[str, ...], int] = {}
+    result = create_palette(data, ("a",), mapping, [])
+    assert result == {("A",): None, ("B",): None, ("C",): None}
 
 
-def test_encoding_items() -> None:
-    enc = Palette(color=("c",), size=("d",))
-    items = list(enc.items())
-    assert items == [("color", ("c",)), ("size", ("d",))]
+def test_create_palette_mapping_empty(data: pl.DataFrame) -> None:
+    result = create_palette(data, ("a",), {}, [1, 2])
+    assert result == {("A",): 1, ("B",): 2, ("C",): 1}
 
 
-def test_encoding_build_palettes_mock(mocker: MockerFixture) -> None:
-    mock_create_palette = mocker.patch(
-        "plotaris.core.palette.create_palette",
-        return_value="a",
-    )
-
-    enc = Palette(color=("a",), size=("b",))
-    palettes = enc.build(pl.DataFrame(), size=[10, 20])
-    assert palettes == {"color": "a", "size": "a"}
-    mock_create_palette.assert_called_with(mocker.ANY, ("b",), [10, 20], SIZES)
+def test_create_palette_default_empty(data: pl.DataFrame) -> None:
+    mapping = {("A",): 10, ("B",): 20}
+    result = create_palette(data, ("a",), mapping, [])
+    assert result == {("A",): 10, ("B",): 20, ("C",): None}
 
 
-def test_encoding_build_palettes(df: pl.DataFrame) -> None:
-    enc = Palette(size=("a",))
-    palettes = enc.build(df)
-    assert palettes == {"size": {("A",): 50, ("B",): 100, ("C",): 150}}
+@pytest.fixture
+def palette() -> Palette:
+    return Palette(color="a", size=("a", "b"), shape="value")
 
 
 @pytest.mark.parametrize(
-    ("index", "size", "shape"),
-    [
-        (0, 50, "o"),
-        (1, 100, "o"),
-        (2, 150, "o"),
-        (3, 200, "s"),
-        (4, 250, "s"),
-        (5, 50, "s"),
-    ],
+    ("index", "value"),
+    [(0, 100), (1, 2), (2, 3), (3, 200), (4, 2), (5, 3)],
 )
-def test_encoding_get_properties(
-    df: pl.DataFrame,
+def test_palette_mapping_default(
+    palette: Palette,
+    data: pl.DataFrame,
     index: int,
-    size: int,
+    value: int,
+) -> None:
+    result = (
+        palette.mapping(size={("A", 1): 100, ("A", 2): 200})
+        .default(size=[1, 2, 3])
+        .set(data)
+        .get(data.row(index, named=True))
+    )
+    assert result == {"color": None, "size": value, "shape": None}
+
+
+@pytest.mark.parametrize(
+    ("index", "color", "shape"),
+    [(0, 1, "o"), (1, 2, "s"), (2, 1, "o"), (3, 1, "s"), (4, 2, "o"), (5, 1, "^")],
+)
+def test_palette_default(
+    palette: Palette,
+    data: pl.DataFrame,
+    index: int,
+    color: int,
     shape: str,
 ) -> None:
-    enc = Palette(size=("a", "b"), shape=("b",))
-    palettes = enc.build(df)
-    x = df.row(index, named=True)
-    assert enc.get(x, palettes) == {"size": size, "shape": shape}
+    result = (
+        palette.default(color=[1, 2], shape=["o", "s", "^"])
+        .set(data)
+        .get(data.row(index, named=True))
+    )
+    assert result == {"color": color, "size": None, "shape": shape}
+
+
+@pytest.mark.parametrize(
+    ("index", "color", "shape"),
+    [
+        (0, 1, "o"),
+        (1, 2, "s"),
+        (2, None, "o"),
+        (3, 1, "s"),
+        (4, 2, "o"),
+        (5, None, None),
+    ],
+)
+def test_palette_mapping(
+    palette: Palette,
+    data: pl.DataFrame,
+    index: int,
+    color: int | None,
+    shape: str | None,
+) -> None:
+    result = (
+        palette.mapping(color={("A",): 1, ("B",): 2}, shape={(10,): "o", (20,): "s"})
+        .set(data)
+        .get(data.row(index, named=True))
+    )
+    assert result == {"color": color, "size": None, "shape": shape}
