@@ -3,7 +3,7 @@ from __future__ import annotations
 import polars as pl
 import pytest
 
-from plotaris.core.palette import Palette, create_palette
+from plotaris.core.palette import Base, create_palette
 
 
 @pytest.fixture(scope="module")
@@ -41,22 +41,22 @@ def test_create_palette_default_empty(data: pl.DataFrame) -> None:
 
 
 @pytest.fixture
-def palette() -> Palette:
-    return Palette(color="a", size=("a", "b"), shape="value", invalid=None)
+def base() -> Base:
+    return Base(color="a", size=("a", "b"), shape="value", invalid=None)
 
 
 @pytest.mark.parametrize(
     ("index", "value"),
     [(0, 100), (1, 2), (2, 3), (3, 200), (4, 2), (5, 3)],
 )
-def test_palette_mapping_default(
-    palette: Palette,
+def test_base_mapping_default(
+    base: Base,
     data: pl.DataFrame,
     index: int,
     value: int,
 ) -> None:
     result = (
-        palette.mapping(size={("A", 1): 100, ("A", 2): 200})
+        base.mapping(size={("A", 1): 100, ("A", 2): 200})
         .default(size=[1, 2, 3])
         .set(data)
         .get(data.row(index, named=True))
@@ -68,15 +68,15 @@ def test_palette_mapping_default(
     ("index", "color", "shape"),
     [(0, 1, "o"), (1, 2, "s"), (2, 1, "o"), (3, 1, "s"), (4, 2, "o"), (5, 1, "^")],
 )
-def test_palette_default(
-    palette: Palette,
+def test_base_default(
+    base: Base,
     data: pl.DataFrame,
     index: int,
     color: int,
     shape: str,
 ) -> None:
     result = (
-        palette.default(color=[1, 2], shape=["o", "s", "^"])
+        base.default(color=[1, 2], shape=["o", "s", "^"])
         .set(data)
         .get(data.row(index, named=True))
     )
@@ -94,15 +94,15 @@ def test_palette_default(
         (5, None, None),
     ],
 )
-def test_palette_mapping(
-    palette: Palette,
+def test_base_mapping(
+    base: Base,
     data: pl.DataFrame,
     index: int,
     color: int | None,
     shape: str | None,
 ) -> None:
     result = (
-        palette.mapping(color={("A",): 1, ("B",): 2}, shape={(10,): "o", (20,): "s"})
+        base.mapping(color={("A",): 1, ("B",): 2}, shape={(10,): "o", (20,): "s"})
         .set(data)
         .get(data.row(index, named=True))
     )

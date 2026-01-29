@@ -14,7 +14,7 @@ type VisualValue = str | int | float
 """Type alias for values that can be assigned to visual properties."""
 
 
-class Palette:
+class Base:
     columns: dict[str, tuple[str, ...]]
     _default: dict[str, list[VisualValue]]
     _mapping: dict[str, dict[tuple[Any, ...], VisualValue]]
@@ -88,7 +88,7 @@ SIZES = [50, 100, 150, 200, 250]
 SHAPES = ["o", "s", "^", "D", "v"]
 
 
-class DefaultPalette(Palette):
+class Palette(Base):
     def __init__(
         self,
         color: str | Iterable[str] | None = None,
