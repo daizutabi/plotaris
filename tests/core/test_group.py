@@ -6,19 +6,11 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal as _assert_frame_equal
 
-from plotaris.core.group import Group, group_by, to_tuple, with_index
+from plotaris.core.group import Group, group_by, with_index
 
 
 def assert_frame_equal(left: pl.DataFrame, right: pl.DataFrame, /) -> None:
     _assert_frame_equal(left, right, check_dtypes=False)
-
-
-@pytest.mark.parametrize(
-    ("values", "expected"),
-    [(None, ()), ("abc", ("abc",)), (["abc"], ("abc",))],
-)
-def test_to_tuple(values: str | list[str] | None, expected: tuple[str, ...]) -> None:
-    assert to_tuple(values) == expected
 
 
 @pytest.mark.parametrize("data", [pl.DataFrame(), pl.DataFrame({"a": [1, 2]})])

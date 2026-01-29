@@ -5,27 +5,10 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 
+from plotaris.utils import to_tuple
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
-
-
-def to_tuple(values: str | Iterable[str] | None, /) -> tuple[str, ...]:
-    """Convert a value to a tuple of strings.
-
-    This utility function handles None, a single string, or an iterable of
-    strings and ensures the output is always a tuple of strings.
-
-    Args:
-        values: The input value to convert.
-
-    Returns:
-        A tuple of strings.
-    """
-    if values is None:
-        return ()
-    if isinstance(values, str):
-        return (values,)
-    return tuple(values)
 
 
 def group_by(
