@@ -38,8 +38,8 @@ class Base:
         palettes: dict[str, dict[tuple[Any, ...], VisualValue | None]] = {}
 
         for name, columns in self.columns.items():
-            default = self._default.get(name, [])
-            mapping = self._mapping.get(name, {})
+            default = self._default.get(name)
+            mapping = self._mapping.get(name)
             palettes[name] = create_palette(data, columns, default, mapping)
 
         self._palettes = palettes
@@ -60,8 +60,8 @@ class Base:
 def create_palette[T](
     data: pl.DataFrame,
     columns: Iterable[str],
-    default: Sequence[T],
-    mapping: Mapping[tuple[Any, ...], T],
+    default: Sequence[T] | None = None,
+    mapping: Mapping[tuple[Any, ...], T] | None = None,
 ) -> dict[tuple[Any, ...], T | None]:
     rows = data.select(columns).unique(maintain_order=True).rows()
 
