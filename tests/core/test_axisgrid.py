@@ -29,9 +29,9 @@ def grid(data: pl.DataFrame) -> FacetGrid:
     return FacetGrid(data, row="a", col="b")
 
 
-def test_nrows_ncols(grid: FacetGrid) -> None:
-    assert grid.nrows == 2
-    assert grid.ncols == 3
+# def test_nrows_ncols(grid: FacetGrid) -> None:
+#     assert grid.nrows == 2
+#     assert grid.ncols == 3
 
 
 def test_axes(grid: FacetGrid) -> None:
@@ -164,8 +164,8 @@ def test_map_dataframe(mocker: MockerFixture) -> None:
     )
 
     grid = FacetGrid(df, row="category")
-    assert grid.nrows == 2
-    assert grid.ncols == 1
+    assert grid.facet_data.nrows == 2
+    assert grid.facet_data.ncols == 1
     assert (0, 0) in grid.facet_axes
     assert (1, 0) in grid.facet_axes
 

@@ -184,8 +184,8 @@ class FacetGrid:
         self.facet_data = FacetData(data, row, col, wrap)
 
         self.figure, axes = plt.subplots(  # pyright: ignore[reportUnknownMemberType]
-            self.nrows,
-            self.ncols,
+            self.facet_data.nrows,
+            self.facet_data.ncols,
             squeeze=False,
             sharex=sharex,
             sharey=sharey,
@@ -199,16 +199,6 @@ class FacetGrid:
         facet_axes = (FacetAxes.from_facet(f, axes[f.row, f.col]) for f in facets)
         self._facet_axes = FacetAxesCollection(facet_axes)
         self._selected_facet_axes = None
-
-    @property
-    def nrows(self) -> int:
-        """Get the number of rows in the facet grid."""
-        return self.facet_data.nrows
-
-    @property
-    def ncols(self) -> int:
-        """Get the number of columns in the facet grid."""
-        return self.facet_data.ncols
 
     @property
     def facet_axes(self) -> FacetAxesCollection:
