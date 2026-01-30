@@ -18,6 +18,34 @@ def data() -> pl.DataFrame:
     )
 
 
+def test_row_col_wrap_row_col(data: pl.DataFrame) -> None:
+    facet_data = FacetData(data, row="a", col="b")
+    assert facet_data.row == ("a",)
+    assert facet_data.col == ("b",)
+    assert facet_data.wrap is None
+
+
+def test_row_col_wrap_row(data: pl.DataFrame) -> None:
+    facet_data = FacetData(data, row="a", wrap=2)
+    assert facet_data.row == ("a",)
+    assert facet_data.col == ()
+    assert facet_data.wrap == 2
+
+
+def test_row_col_wrap_col(data: pl.DataFrame) -> None:
+    facet_data = FacetData(data, col=("a", "b"), wrap=2)
+    assert facet_data.row == ()
+    assert facet_data.col == ("a", "b")
+    assert facet_data.wrap == 2
+
+
+def test_row_col_wrap_none(data: pl.DataFrame) -> None:
+    facet_data = FacetData(data)
+    assert facet_data.row == ()
+    assert facet_data.col == ()
+    assert facet_data.wrap is None
+
+
 def test_index_row_col(data: pl.DataFrame) -> None:
     facet_data = FacetData(data, row="a", col="b")
     assert facet_data.index(0, 0) == 0
