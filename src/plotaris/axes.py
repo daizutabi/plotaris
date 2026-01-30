@@ -57,17 +57,17 @@ def format_axis(
     **kwargs: Any,
 ) -> Text:
     label, places = _split_places(label)
-    fmt = "g" if places is None else f".{places:d}f"
+    fmt = "g" if places is None else f".{places}f"
 
     text = axis.set_label_text(label, fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
     if sep := _sep_unit(label):
         _, unit = label[:-1].rsplit(sep, 1)
-        power = _get_power(unit)
+        scale = 10 ** _get_power(unit)
     else:
-        power = 0
+        scale = 1
 
-    func = FuncFormatter(lambda x, _: f"{x / 10**power:{fmt}}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
+    func = FuncFormatter(lambda x, _: f"{x / scale:{fmt}}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
     axis.set_major_formatter(func)
 
     return text
