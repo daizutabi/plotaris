@@ -19,16 +19,16 @@ def _sep_unit(label: str) -> Literal["(", "["] | None:
     return None
 
 
-def _split_places(label: str) -> tuple[str, int]:
+def _split_places(label: str) -> tuple[str, int | None]:
     sep = _sep_unit(label)
 
     if not sep:
-        return label, 0
+        return label, None
 
     _, unit = label.rsplit(sep, 1)
 
     if ":" not in unit:
-        return label, 0
+        return label, None
 
     suffix = label[-1]
     label, places = label[:-1].rsplit(":", 1)
@@ -57,15 +57,18 @@ def format_axis(
     **kwargs: Any,
 ) -> Text:
     label, places = _split_places(label)
+    fmt = "g" if places is None else f".{places:d}f"
+
     text = axis.set_label_text(label, fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
-    if not (sep := _sep_unit(label)):
-        return text
+    if sep := _sep_unit(label):
+        _, unit = label[:-1].rsplit(sep, 1)
+        power = _get_power(unit)
+    else:
+        power = 0
 
-    _, unit = label[:-1].rsplit(sep, 1)
-    if power := _get_power(unit):
-        func = FuncFormatter(lambda x, _: f"{x / 10**power:.{places}f}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
-        axis.set_major_formatter(func)
+    func = FuncFormatter(lambda x, _: f"{x / 10**power:{fmt}}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
+    axis.set_major_formatter(func)
 
     return text
 

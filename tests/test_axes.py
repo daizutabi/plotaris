@@ -24,14 +24,23 @@ def ax() -> Iterator[Axes]:
 
 @pytest.mark.parametrize(
     "label",
-    ["Voltage", "Voltage (V)", "Length [m]", "unknown [ABC]"],
+    ["Voltage", "Voltage (V)", "Length [m]"],
 )
 def test_format_axis_without_prefix(ax: Axes, label: str) -> None:
     ax.set(ylim=(0, 2))
     text = format_axis(ax.yaxis, label)
     assert text.get_text() == label
     ticks = [x.get_text() for x in ax.yaxis.get_majorticklabels()]
-    assert ticks == ["0.0", "0.5", "1.0", "1.5", "2.0"]
+    assert ticks == ["0", "0.5", "1", "1.5", "2"]
+
+
+def test_format_axis_with_unknown_prefix(ax: Axes) -> None:
+    label = "unknown [ABC]"
+    ax.set(ylim=(0, 2))
+    text = format_axis(ax.yaxis, label)
+    assert text.get_text() == label
+    ticks = [x.get_text() for x in ax.yaxis.get_majorticklabels()]
+    assert ticks == ["0", "0.5", "1", "1.5", "2"]
 
 
 def test_format_axis_with_prefix(ax: Axes) -> None:
