@@ -37,12 +37,6 @@ def _():
     axes_text(_ax, 0.98, 0.02, "abcdef")
     t = axes_text(_ax, 0.98, 0.98, "abcdef")
     _ax
-    return (t,)
-
-
-@app.cell
-def _(t):
-    t.get_position()
     return
 
 
