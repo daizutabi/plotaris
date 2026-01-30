@@ -164,6 +164,12 @@ class FacetCollection[T: Facet]:
 class FacetData:
     group: Group
     """The underlying Group object that manages the data partitioning."""
+    row: tuple[str, ...]
+    """The column(s) used to define the rows of the facet grid."""
+    col: tuple[str, ...]
+    """The column(s) used to define the columns of the facet grid."""
+    wrap: int | None
+    """If provided, the number of columns to wrap a 1D facet grid into 2D."""
     nrows: int
     """The number of rows in the facet grid."""
     ncols: int
@@ -217,6 +223,9 @@ class FacetData:
             self.group = Group(data)
             self._lookup = {(0, 0): 0}
 
+        self.row = self.group.mapping.get("row", ())
+        self.col = self.group.mapping.get("col", ())
+        self.wrap = wrap
         self.nrows = max(r for (r, _) in self._lookup) + 1
         self.ncols = max(c for (_, c) in self._lookup) + 1
 

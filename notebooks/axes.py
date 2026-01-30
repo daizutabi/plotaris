@@ -35,7 +35,7 @@ def _():
     axes_text(_ax, 0.02, 0.02, "abcdef")
     axes_text(_ax, 0.02, 0.98, "abcdef")
     axes_text(_ax, 0.98, 0.02, "abcdef")
-    t = axes_text(_ax, 0.98, 0.98, "abcdef")
+    axes_text(_ax, 0.98, 0.98, "abcdef")
     _ax
     return
 

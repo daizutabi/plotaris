@@ -1,25 +1,20 @@
 import marimo
 
-__generated_with = "0.19.5"
-app = marimo.App(width="full")
+__generated_with = "0.19.7"
+app = marimo.App(width="medium")
+
+with app.setup:
+    import polars as pl
+
+    from plotaris import FacetGrid
 
 
 @app.cell
 def _():
-    import plotaris as plts
-    import polars as pl
-    from matplotlib.axes import Axes
-
-    plts.init()
-    return Axes, pl, plts
-
-
-@app.cell
-def _(pl):
     data = pl.DataFrame(
         {
             "a": [1, 1, 1, 2, 2, 2],
-            "b": [3, 3, 4, 4, 5, 5],
+            "b": [3, 4, 5, 3, 4, 5],
             "x": range(6),
             "y": range(10, 16),
         },
@@ -28,17 +23,8 @@ def _(pl):
 
 
 @app.cell
-def _(Axes, pl):
-    def plot(data: pl.DataFrame, *, ax: Axes) -> None:
-        ax.scatter(data["x"], data["y"])
-    return (plot,)
-
-
-@app.cell
-def _(data, plot, plts):
-    grid = plts.FacetGrid(data, row="a", col="b", sharex=True).map_dataframe(plot)
-    grid.map_axes(lambda ax: ax.set(xlabel="a"))
-    grid
+def _(data):
+    FacetGrid(data, row="a", col="b", figsize=(4, 2))
     return
 
 
