@@ -22,7 +22,10 @@ def ax() -> Iterator[Axes]:
     plt.close(fig)
 
 
-@pytest.mark.parametrize("label", ["Voltage", "Voltage (V)", "Voltage [V]"])
+@pytest.mark.parametrize(
+    "label",
+    ["Voltage", "Voltage (V)", "Length [m]", "unknown [ABC]"],
+)
 def test_format_axis_without_prefix(ax: Axes, label: str) -> None:
     ax.set(ylim=(0, 2))
     text = format_axis(ax.yaxis, label)

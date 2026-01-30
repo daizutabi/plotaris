@@ -62,8 +62,7 @@ def format_axis(
     if not (sep := _sep_unit(label)):
         return text
 
-    _, unit = label.rsplit(sep, 1)
-
+    _, unit = label[:-1].rsplit(sep, 1)
     if power := _get_power(unit):
         func = FuncFormatter(lambda x, _: f"{x / 10**power:.{places}f}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
         axis.set_major_formatter(func)
