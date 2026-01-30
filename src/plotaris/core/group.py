@@ -15,16 +15,17 @@ def group_by(
     data: pl.DataFrame,
     *columns: str | Iterable[str],
 ) -> tuple[pl.DataFrame, list[pl.DataFrame]]:
-    """Group a DataFrame and return index and a list of data.
+    """Groups a DataFrame and returns an index and a list of dataframes.
 
     Args:
         data: The DataFrame to group.
-        by: The column names to group by.
+        *columns: Column names to group by. Can be specified as individual
+            strings or iterables of strings.
 
     Returns:
         A tuple containing:
             - A DataFrame of unique group keys.
-            - A list of DataFrames, each corresponding to a group.
+            - A list of DataFrames, where each corresponds to a group.
     """
     cs = [[c] if isinstance(c, str) else c for c in columns]
     by = sorted(set(chain.from_iterable(cs)))
@@ -43,7 +44,7 @@ def group_by(
 
 
 def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.DataFrame:
-    """Add a column with a unique integer index for a set of columns.
+    """Adds a column with a unique integer index for a set of columns.
 
     This is equivalent to a multi-column "factorize" operation. It finds the
     unique combinations of values in `columns`, assigns an integer index to
@@ -56,7 +57,7 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
         name: The name for the new index column.
 
     Returns:
-        The DataFrame with the new index column.
+        A new DataFrame with the added index column.
     """
     if not columns:
         return data.with_columns(pl.lit(None).alias(name))
@@ -69,13 +70,29 @@ def with_index(data: pl.DataFrame, columns: Sequence[str], name: str) -> pl.Data
 
 
 def _index_name(dimension: str | None = None, /) -> str:
-    """Get the internal column name for a dimension's integer index."""
+    """Gets the internal column name for a dimension's integer index.
+
+    Args:
+        dimension: The name of the dimension (e.g., "row", "col").
+
+    Returns:
+        The internal column name for the index, or a regex pattern to match all
+        index columns if no dimension is provided.
+    """
     if dimension:
         return f"_{dimension}_index"
     return "^_.*_index$"
 
 
 def _flatten(*values: str | Iterable[str]) -> Iterator[str]:
+    """Flattens an iterable of strings and other iterables of strings.
+
+    Args:
+        *values: One or more strings or iterables of strings.
+
+    Yields:
+        Individual strings.
+    """
     for value in values:
         if isinstance(value, str):
             yield value
@@ -84,6 +101,19 @@ def _flatten(*values: str | Iterable[str]) -> Iterator[str]:
 
 
 class Group:
+    """Manages data grouped by specified dimensions.
+
+    This class splits a DataFrame into subgroups based on the unique values in
+    columns associated with dimensions (e.g., "row", "col"). It assigns integer
+    indices to each group for easy access and manipulation.
+
+    Attributes:
+        mapping: A dictionary mapping dimension names (e.g., "row", "col") to
+            tuples of column names.
+        data: A list of DataFrames, where each DataFrame is a subgroup of the
+            original data.
+    """
+
     mapping: dict[str, tuple[str, ...]]
     """A mapping from dimension names (e.g., "row", "col") to a tuple of column names."""  # noqa: E501
     data: list[pl.DataFrame]
@@ -98,6 +128,14 @@ class Group:
     """
 
     def __init__(self, data: pl.DataFrame, **columns: str | Iterable[str]) -> None:
+        """Initializes the Group object.
+
+        Args:
+            data: The DataFrame to group.
+            **columns: Keyword arguments where keys are dimension names and values
+                are the column names to group by for that dimension. Column
+                names can be a single string or an iterable of strings.
+        """
         self.mapping = {dim: to_tuple(cols) for dim, cols in columns.items()}
 
         if data.is_empty():
@@ -114,21 +152,40 @@ class Group:
         self._index = index
 
     def __getitem__(self, index: int) -> pl.DataFrame:
-        """Get the data subgroup at a given index."""
+        """Gets the data subgroup at a given index."""
         return self.data[index]
 
     def __len__(self) -> int:
-        """Get the total number of subgroups."""
+        """Gets the total number of subgroups."""
         return len(self.data)
 
     def __iter__(self) -> Iterator[pl.DataFrame]:
-        """Iterate over all data subgroups."""
+        """Iterates over all data subgroups."""
         return iter(self.data)
 
     def __contains__(self, dimension: str) -> bool:
+        """Checks if the given dimension exists in the group mapping.
+
+        Args:
+            dimension: The name of the dimension to check.
+
+        Returns:
+            True if the dimension exists, False otherwise.
+        """
         return dimension in self.mapping
 
     def indices(self, *dimension: str | Iterable[str]) -> pl.DataFrame:
+        """Gets the integer indices for the specified dimensions.
+
+        If no dimensions are provided, it returns indices for all dimensions.
+
+        Args:
+            *dimension: The names of the dimensions to get indices for.
+
+        Returns:
+            A DataFrame containing the integer index columns for the requested
+            dimensions.
+        """
         if not dimension:
             dimension = tuple(self.mapping)
 
@@ -136,6 +193,18 @@ class Group:
         return self._index.select(**named)
 
     def keys(self, *dimension: str | Iterable[str]) -> pl.DataFrame:
+        """Gets the group key values for the specified dimensions.
+
+        Group keys are the unique combinations of values in the original columns
+        used for grouping. If no dimensions are provided, it returns keys for all
+        dimensions.
+
+        Args:
+            *dimension: The names of the dimensions to get keys for.
+
+        Returns:
+            A DataFrame containing the key columns for the requested dimensions.
+        """
         if not dimension:
             return self._index.select(pl.exclude(_index_name()))
 
@@ -144,4 +213,10 @@ class Group:
         return self._index.select(columns)
 
     def dimension_keys(self) -> dict[str, pl.DataFrame]:
+        """Gets a dictionary mapping each dimension to its keys.
+
+        Returns:
+            A dictionary where keys are dimension names and values are DataFrames
+            containing the keys for that dimension.
+        """
         return {dim: self.keys(dim) for dim in self.mapping}
