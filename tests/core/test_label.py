@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from plotaris.core.label import Label, get_unit_seperator, split_precision, split_unit
+from plotaris.core.label import (
+    Label,
+    get_unit_seperator,
+    split_precision,
+    split_unit_precision,
+)
 
 
 @pytest.mark.parametrize(
@@ -43,8 +48,11 @@ def test_split_precision(label: str, expected: tuple[str, int | None]) -> None:
         ("[:2]", ("", "", 2)),
     ],
 )
-def test_split_unit(label: str, expected: tuple[str, str, int | None]) -> None:
-    assert split_unit(label) == expected
+def test_split_unit_precision(
+    label: str,
+    expected: tuple[str, str, int | None],
+) -> None:
+    assert split_unit_precision(label) == expected
 
 
 def test_str_default() -> None:
@@ -77,6 +85,11 @@ def test_format_default() -> None:
 def test_format_str(fmt: str | tuple[str, str], expected: str) -> None:
     label = Label({"a": 1e-6})
     assert label.format(a=fmt) == expected
+
+
+def test_format_unit_sep() -> None:
+    label = Label({"a": 1e-6}, unit_sep=" ")
+    assert label.format(a="A [V]") == "A=1 µV"
 
 
 def test_format_callable() -> None:

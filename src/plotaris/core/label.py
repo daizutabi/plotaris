@@ -70,7 +70,7 @@ def split_precision(label: str, sep: str | None = None) -> tuple[str, int | None
     return f"{label}{suffix}", int(places)
 
 
-def split_unit(label: str) -> tuple[str, str, int | None]:
+def split_unit_precision(label: str) -> tuple[str, str, int | None]:
     """Splits a label string into its constituent parts: text, unit, and precision.
 
     This function parses a string that may contain a unit and a precision
@@ -125,7 +125,7 @@ def _format(value: Any, fmt: Format | None, sep: str = "") -> str | tuple[str, s
     if "{" in fmt and "}" in fmt:
         return fmt.format(value)
 
-    label, unit, precision = split_unit(fmt)
+    label, unit, precision = split_unit_precision(fmt)
     return label, EngFormatter(unit, precision, sep)(value)
 
 
@@ -145,6 +145,7 @@ class Label:
     data: dict[str, Any] = field(default_factory=dict)
     eq: str = "="
     sep: str = ", "
+    unit_sep: str = ""
 
     @override
     def __str__(self) -> str:
@@ -189,7 +190,7 @@ class Label:
         for key, value in self.data.items():
             fmt = formats.get(key)
             key_, fmt = fmt if isinstance(fmt, tuple) else (key, fmt)
-            formatted = _format(value, fmt)  # ty: ignore[invalid-argument-type]
+            formatted = _format(value, fmt, self.unit_sep)  # ty: ignore[invalid-argument-type]
 
             if isinstance(formatted, tuple):
                 parts.append(f"{formatted[0] or key_}{self.eq}{formatted[1]}")
