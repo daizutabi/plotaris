@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 from .group import Group
@@ -35,10 +35,10 @@ class FacetLabel:
         **kwargs: Format | tuple[str, Format],
     ) -> str:
         labels: list[str] = []
-        if self.dim != "col":
-            labels.append(self.row.format(formats, **kwargs))
-        if self.dim != "row":
-            labels.append(self.col.format(formats, **kwargs))
+        if self.dim != "col" and (label := self.row.format(formats, **kwargs)):
+            labels.append(label)
+        if self.dim != "row" and (label := self.col.format(formats, **kwargs)):
+            labels.append(label)
         return self.sep.join(labels)
 
 
@@ -46,7 +46,7 @@ class FacetLabel:
 class Facet:
     """Represent a single cell in the facet grid, which may or may not contain data."""
 
-    data: pl.DataFrame | None
+    data: pl.DataFrame | None = field(repr=False)
     """The DataFrame subset for this facet, or `None` if the facet is empty."""
     row: int
     """The row index of the facet cell."""
