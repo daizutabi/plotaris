@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from plotaris.core.label import Label, get_unit_seperator, split_places, split_unit
+from plotaris.core.label import Label, get_unit_seperator, split_precision, split_unit
 
 
 @pytest.mark.parametrize(
@@ -28,8 +28,8 @@ def test_get_unit_seperator(label: str, expected: str | None) -> None:
         ("[b:2]", ("[b]", 2)),
     ],
 )
-def test_split_places(label: str, expected: tuple[str, str | None]) -> None:
-    assert split_places(label) == expected
+def test_split_precision(label: str, expected: tuple[str, int | None]) -> None:
+    assert split_precision(label) == expected
 
 
 @pytest.mark.parametrize(
