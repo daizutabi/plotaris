@@ -41,6 +41,23 @@ class FacetAxes(Facet):
         loc: Literal["top", "right"],
         **kwargs: Format | tuple[str, Format],
     ) -> Self:
+        """Set a title on the `Axes` object for this facet.
+
+        The title can be placed at the top of the axes or on the right side.
+        It uses the `FacetLabel` associated with the facet to generate the title string.
+
+        Args:
+            formats: A dictionary mapping data keys to format specifiers for the
+                `plotaris.core.label.Label.format` method.
+            dim: The facet dimension ("row" or "col") to use for the title.
+                If `None`, all dimensions are used.
+            loc: The location of the title, either "top" or "right".
+            **kwargs: Additional per-key format specifiers provided as keyword
+                arguments, merged with `formats`.
+
+        Returns:
+            The `FacetAxes` instance for method chaining.
+        """
         self.label.dim = dim
         label = self.label.format(formats, **kwargs)
         if not label:
