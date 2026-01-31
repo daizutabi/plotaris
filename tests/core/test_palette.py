@@ -101,7 +101,7 @@ def test_base_mapping(
     shape: str | None,
 ) -> None:
     result = (
-        base.mapping(color={("A",): 1, ("B",): 2}, shape={(10,): "o", (20,): "s"})
+        base.mapping(color={"A": 1, "B": 2}, shape={(10,): "o", (20,): "s"})
         .set(data)
         .get(data.row(index, named=True))
     )
