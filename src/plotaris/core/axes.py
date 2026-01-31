@@ -33,12 +33,13 @@ def format_axis(
     fontdict: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Text:
-    label, precision = split_precision(label)
+    sep = get_unit_seperator(label)
+    label, precision = split_precision(label, sep)
     fmt = "g" if precision is None else f".{precision}f"
 
     text = axis.set_label_text(label, fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
-    if sep := get_unit_seperator(label):
+    if sep:
         _, unit = label[:-1].rsplit(sep, 1)
         scale = 10 ** _get_power(unit)
     else:
