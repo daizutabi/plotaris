@@ -83,7 +83,7 @@ class Label:
         for key, value in self.data.items():
             fmt = formats.get(key)
             key_, fmt = fmt if isinstance(fmt, tuple) else (key, fmt)
-            formatted = _format(value, fmt)  # ty:ignore[invalid-argument-type]
+            formatted = _format(value, fmt)  # ty: ignore[invalid-argument-type]
 
             if isinstance(formatted, tuple):
                 parts.append(f"{formatted[0] or key_}{self.eq}{formatted[1]}")
