@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, overload
 
 import polars as pl
 
@@ -220,3 +220,39 @@ class Group:
             containing the keys for that dimension.
         """
         return {dim: self.keys(dim) for dim in self.mapping}
+
+    @overload
+    def labels(self, index: int) -> dict[str, dict[str, Any]]: ...
+
+    @overload
+    def labels(self, index: None = None) -> list[dict[str, dict[str, Any]]]: ...
+
+    def labels(
+        self,
+        index: int | None = None,
+    ) -> dict[str, dict[str, Any]] | list[dict[str, dict[str, Any]]]:
+        """Gets the labels for one or all data groups.
+
+        Each group is defined by a unique combination of values from the columns
+        specified in the dimensions. This method retrieves these values.
+
+        Args:
+            index: The integer index of a specific group. If None (default),
+                labels for all groups are returned.
+
+        Returns:
+            If `index` is an integer, returns a dictionary mapping dimension names
+            to the key-value pairs for that group.
+            Example: `{"row": {"col_a": 1}, "col": {"col_b": "x"}}`
+
+            If `index` is None, returns a list of these dictionaries, with one
+            entry for each group.
+        """
+        if index is not None:
+            return {dim: self.keys(dim).row(index, named=True) for dim in self.mapping}
+
+        dim_keys = self.dimension_keys()
+        return [
+            {dim: keys.row(i, named=True) for dim, keys in dim_keys.items()}
+            for i in range(len(self))
+        ]

@@ -190,6 +190,14 @@ def test_group_columns_str_str(data: pl.DataFrame) -> None:
     assert_frame_equal(dim["row"], expected.select("a"))
     assert_frame_equal(dim["col"], expected.select("b"))
 
+    assert gr.labels(1) == {"row": {"a": 1}, "col": {"b": 4}}
+    assert gr.labels() == [
+        {"row": {"a": 1}, "col": {"b": 3}},
+        {"row": {"a": 1}, "col": {"b": 4}},
+        {"row": {"a": 2}, "col": {"b": 4}},
+        {"row": {"a": 2}, "col": {"b": 5}},
+    ]
+
 
 def test_group_columns_str_str_duplicated(data: pl.DataFrame) -> None:
     gr = Group(data, row="b", col="b")
