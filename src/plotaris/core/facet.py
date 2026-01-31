@@ -12,6 +12,14 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class FacetLabel:
+    row: dict[str, Any]
+    """The label for the row dimension."""
+    col: dict[str, Any]
+    """The label for the column dimension."""
+
+
+@dataclass(frozen=True)
 class Facet:
     """Represent a single cell in the facet grid, which may or may not contain data."""
 
@@ -37,10 +45,8 @@ class Facet:
     """True if the cell is the rightmost occupied cell in its row."""
     is_bottommost: bool
     """True if the cell is the bottommost occupied cell in its column."""
-    row_label: dict[str, Any]
-    """The label for the row dimension."""
-    col_label: dict[str, Any]
-    """The label for the column dimension."""
+    label: FacetLabel
+    """The labels for the row and column dimensions."""
 
     def __iter__(self) -> Iterator[int]:
         """Allow unpacking the cell as `row, col`."""
@@ -313,21 +319,12 @@ def _create_facet(
 
     if index is None:
         data = None
-        row_label = {}
-        col_label = {}
+        label = FacetLabel({}, {})
 
     else:
         data = facet_data.group[index]
-
-        if "row" in facet_data.group:
-            row_label = facet_data.group.keys("row").row(index, named=True)
-        else:
-            row_label = {}
-
-        if "col" in facet_data.group:
-            col_label = facet_data.group.keys("col").row(index, named=True)
-        else:
-            col_label = {}
+        labels = facet_data.group.labels(index)
+        label = FacetLabel(labels.get("row", {}), labels.get("col", {}))
 
     return Facet(
         data,
@@ -341,6 +338,5 @@ def _create_facet(
         is_topmost=min_row_for_col.get(col) == row,
         is_rightmost=max_col_for_row.get(row) == col,
         is_bottommost=max_row_for_col.get(col) == row,
-        row_label=row_label,
-        col_label=col_label,
+        label=label,
     )

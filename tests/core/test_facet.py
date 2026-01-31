@@ -212,19 +212,19 @@ def test_facet_data_boundary_attrs(
     assert facet.is_bottommost is is_bottommost
 
 
-def test_facet_labels(facet_data_2x3: FacetData) -> None:
+def test_facet_label(facet_data_2x3: FacetData) -> None:
     facet_0_0 = facet_data_2x3[0, 0]
-    assert facet_0_0.row_label == {"a": 1}
-    assert facet_0_0.col_label == {"b": 3}
+    assert facet_0_0.label.row == {"a": 1}
+    assert facet_0_0.label.col == {"b": 3}
 
     facet_0_2 = facet_data_2x3[0, 2]
-    assert facet_0_2.row_label == {}
-    assert facet_0_2.col_label == {}
+    assert facet_0_2.label.row == {}
+    assert facet_0_2.label.col == {}
 
     facet_data_row_only = FacetData(facet_data_2x3.group.data[0], row="a")
     facet = facet_data_row_only[0, 0]
-    assert facet.row_label == {"a": 1}
-    assert facet.col_label == {}
+    assert facet.label.row == {"a": 1}
+    assert facet.label.col == {}
 
 
 def test_facet_collection_filter_has_data(facet_data_2x3: FacetData) -> None:
