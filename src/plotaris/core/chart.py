@@ -9,6 +9,7 @@ from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 from plotaris.utils import to_tuple
 
+from .group import Group
 from .palette import Palette
 
 if TYPE_CHECKING:
@@ -30,6 +31,7 @@ class Chart:
     row: tuple[str, ...] = ()
     col: tuple[str, ...] = ()
     wrap: int | None = None
+    palette: Palette | None = None
     mark: Mark | None = None
 
     def __init__(self, data: pl.DataFrame) -> None:
@@ -60,6 +62,8 @@ class Chart:
         if row or col:
             self.facet(row, col, wrap)
 
+        self.palette = Palette(**self.encoding).set(self.data)
+
         return self
 
     def facet(
@@ -71,7 +75,13 @@ class Chart:
         self.row = to_tuple(row)
         self.col = to_tuple(col)
         self.wrap = wrap
+
         return self
+
+    @property
+    def encoding(self) -> dict[str, tuple[str, ...]]:
+        names = ["color", "size", "shape"]
+        return {name: value for name in names if (value := getattr(self, name))}
 
     def mark_point(self, **kwargs: Any) -> Self:
         self.mark = PointMark(**kwargs)
@@ -85,10 +95,6 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    @property
-    def encoding(self) -> Palette:
-        return Palette(color=self.color, size=self.size, shape=self.shape)
-
     def display(self, ax: Axes | None = None) -> Axes:
         if ax is None:
             ax = plt.figure().add_subplot()  # pyright: ignore[reportUnknownMemberType]
@@ -96,15 +102,21 @@ class Chart:
         if not self.mark:
             return ax
 
-        kwargs: dict[str, Any] = {}
+        group = Group(self.data, **self.encoding)
 
-        if self.x is not None:
-            kwargs["x"] = self.data.select(self.x).to_series()
+        for data in group:
+            kwargs: dict[str, Any] = {}
 
-        if self.y is not None:
-            kwargs["y"] = self.data.select(self.y).to_series()
+            if self.palette:
+                kwargs.update(self.palette.get(data))
 
-        self.mark.plot(ax, **kwargs)
+            if self.x is not None:
+                kwargs["x"] = data.select(self.x).to_series()
+
+            if self.y is not None:
+                kwargs["y"] = data.select(self.y).to_series()
+
+            self.mark.plot(ax, **kwargs)
 
         return ax
 
