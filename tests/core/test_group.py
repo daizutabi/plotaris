@@ -83,6 +83,8 @@ def test_group_empty_with_columns() -> None:
     assert_frame_equal(gr.indices(), pl.DataFrame({"a": [], "b": []}))
     assert gr.mapping == {"a": ("A",), "b": ("B", "C")}
     assert gr.data == []
+    assert "a" in gr
+    assert "c" not in gr
 
 
 def test_group_one() -> None:
