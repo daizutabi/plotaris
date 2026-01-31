@@ -17,8 +17,8 @@ def get_unit_seperator(label: str) -> Literal["(", "["] | None:
     return None
 
 
-def split_places(label: str) -> tuple[str, int | None]:
-    sep = get_unit_seperator(label)
+def split_places(label: str, sep: str | None = None) -> tuple[str, int | None]:
+    sep = sep or get_unit_seperator(label)
 
     if not sep:
         return label, None
@@ -40,7 +40,7 @@ def split_unit(label: str) -> tuple[str, str, int | None]:
     if not sep:
         return label, "", None
 
-    label, places = split_places(label)
+    label, places = split_places(label, sep)
     label, unit = label.rsplit(sep, 1)
     return label.rstrip(), unit[:-1], places
 
