@@ -4,6 +4,8 @@ from collections.abc import Mapping
 from itertools import cycle
 from typing import TYPE_CHECKING, Any, Self
 
+import matplotlib.pyplot as plt
+
 from plotaris.utils import to_tuple
 
 if TYPE_CHECKING:
@@ -106,16 +108,6 @@ def create_palette[T](
     return dict(zip(rows, cycle(default_)))
 
 
-COLORS = [
-    "#d42f7e",
-    "#7c388c",
-    "#1952a6",
-    "#54a9cc",
-    "#318c3a",
-    "#f2ce00",
-    "#e6820b",
-    "#cf1111",
-]
 SIZES = [50, 100, 150, 200, 250]
 SHAPES = ["o", "s", "^", "D", "v"]
 
@@ -129,7 +121,7 @@ class Palette(Base):
     ) -> None:
         super().__init__(color=color, size=size, shape=shape)
         self.default(
-            color=color and COLORS,
+            color=color and plt.rcParams["axes.prop_cycle"].by_key()["color"],
             size=size and SIZES,
             shape=shape and SHAPES,
         )

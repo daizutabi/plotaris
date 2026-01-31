@@ -127,4 +127,4 @@ def test_palette(data: pl.DataFrame) -> None:
     palette = Palette("a", ("a", "b"))
     assert palette.columns == {"color": ("a",), "size": ("a", "b")}
     result = palette.set(data).get(data.row(0, named=True))
-    assert result == {"color": "#d42f7e", "size": 50}
+    assert result == {"color": "#1f77b4", "size": 50}
