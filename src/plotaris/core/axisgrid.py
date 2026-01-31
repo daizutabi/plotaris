@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
+    from .label import Format
+
 
 @dataclass(frozen=True)
 class FacetAxes(Facet):
@@ -357,72 +359,56 @@ class FacetGrid:
         self.facet_axes.set(**kwargs)
         return self
 
-    # def set_titles(
-    #     self,
-    #     template: str | None = None,
-    #     **kwargs: Any,
-    # ) -> Self:
-    #     """Set the titles for each subplot.
+    def set_titles(
+        self,
+        formats: dict[str, Format | tuple[str, Format]] | None = None,
+        *,
+        margin_titles: bool = True,
+        **kwargs: Format | tuple[str, Format],
+    ) -> Self:
+        """Sets titles for the facet grid, typically along the top and right edges.
 
-    #     Args:
-    #         template: A format string for the titles. Variables from the
-    #             facet's row and column values can be used. If not provided,
-    #             a default template is generated.
-    #         **kwargs: Additional keyword arguments passed to `ax.set_title`.
+        This method leverages the advanced formatting capabilities of the
+        `FacetLabel` and `plotaris.core.label.Label` classes to create
+        descriptive titles for each facet. Top titles typically represent
+        row dimensions, while right titles represent column dimensions.
 
-    #     Returns:
-    #         The `FacetGrid` instance for method chaining.
-    #     """
-    #     if template is None:
-    #         parts = []
-    #         if self.facet_data.row_names:
-    #             row_template = " | ".join(
-    #                 f"{name}={{{name}}}" for name in self.facet_data.row_names
-    #             )
-    #             parts.append(row_template)
-    #         if self.facet_data.col_names:
-    #             col_template = " | ".join(
-    #                 f"{name}={{{name}}}" for name in self.facet_data.col_names
-    #             )
-    #             parts.append(col_template)
-    #         template = " | ".join(parts)
+        Args:
+            formats: A dictionary mapping data keys to format specifiers for the
+                `plotaris.core.label.Label.format` method.
+            margin_titles: If `True`, titles are placed in the figure margins
+                (top and right). If `False`, titles are placed within each subplot.
+            **kwargs: Additional per-key format specifiers provided as keyword
+                arguments, merged with `formats`.
 
-    #     if not template:
-    #         return self
+        Returns:
+            The `FacetGrid` instance for method chaining.
+        """
 
-    #     for f in self.facet_axes:
-    #         if not f.has_data:
-    #             continue
-    #         title_data = {**f.row_vals, **f.col_vals}
-    #         title = template.format(**title_data)
-    #         f.axes.set_title(title, **kwargs)
+        def set_title(
+            facet_axes: FacetAxes,
+            dim: Literal["row", "col"] | None,
+            loc: Literal["top", "right"],
+        ) -> None:
+            facet_axes.label.dim = dim
+            label = facet_axes.label.format(formats, **kwargs)
+            if not label:
+                return
 
-    #     return self
+            if loc == "top":
+                facet_axes.axes.set_title(label)  # pyright: ignore[reportUnknownMemberType]
+            else:
+                ax = facet_axes.axes.twinx()
+                ax.set_yticks([])  # pyright: ignore[reportUnknownMemberType]
+                ax.set_ylabel(label)  # pyright: ignore[reportUnknownMemberType]
 
-    # def set_axis_labels(
-    #     self,
-    #     xlabel: str | None = None,
-    #     ylabel: str | None = None,
-    #     **kwargs: Any,
-    # ) -> Self:
-    #     """Set the labels for the x and y axes for the entire figure.
+        if margin_titles:
+            self.facet_axes.filter(is_topmost=True).map(set_title, "col", "top")
+            self.facet_axes.filter(is_rightmost=True).map(set_title, "row", "right")
+        else:
+            self.facet_axes.map(set_title, None, "top")
 
-    #     Args:
-    #         xlabel: The label for the x-axis.
-    #         ylabel: The label for the y-axis.
-    #         **kwargs: Additional keyword arguments passed to `fig.supxlabel`
-    #             and `fig.supylabel`.
-
-    #     Returns:
-    #         The `FacetGrid` instance for method chaining.
-    #     """
-    #     if xlabel is not None:
-    #         self.figure.supxlabel(xlabel, **kwargs)
-    #     if ylabel is not None:
-    #         self.figure.supylabel(ylabel, **kwargs)
-    #     return self
-
-    #     return self
+        return self
 
     def _display_(self) -> Figure:
         """Return the figure for display in IPython environments."""

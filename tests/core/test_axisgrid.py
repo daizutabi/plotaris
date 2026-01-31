@@ -29,11 +29,6 @@ def grid(data: pl.DataFrame) -> FacetGrid:
     return FacetGrid(data, row="a", col="b")
 
 
-# def test_nrows_ncols(grid: FacetGrid) -> None:
-#     assert grid.nrows == 2
-#     assert grid.ncols == 3
-
-
 def test_axes(grid: FacetGrid) -> None:
     assert len(grid.facet_axes) == 6
     assert (0, 0) in grid.facet_axes
@@ -204,6 +199,31 @@ def test_set(grid: FacetGrid, mocker: MockerFixture) -> None:
     _, kwargs = calls[0]
     assert kwargs["x"] == 1
     assert kwargs["y"] == 2
+
+
+def test_set_titles_margin_titles_true(data: pl.DataFrame) -> None:
+    grid = FacetGrid(data, row="a", col="b")
+    grid.set_titles({"b": "{:.1f}"}, a="A(m)", margin_titles=True)
+    assert grid.facet_axes[0, 0].axes.get_title() == "b=3.0"
+    assert grid.facet_axes[0, 1].axes.get_title() == "b=4.0"
+    assert grid.facet_axes[0, 2].axes.get_title() == ""
+    assert grid.facet_axes[1, 0].axes.get_title() == ""
+    assert grid.facet_axes[1, 1].axes.get_title() == ""
+    assert grid.facet_axes[1, 2].axes.get_title() == "b=5.0"
+    assert len(grid.figure.axes) == 8
+    assert grid.figure.axes[-2].get_ylabel() == "A=1m"
+    assert grid.figure.axes[-1].get_ylabel() == "A=2m"
+
+
+def test_set_titles_margin_titles_false(data: pl.DataFrame) -> None:
+    grid = FacetGrid(data, row="a", col="b")
+    grid.set_titles({"b": "{:.1f}"}, a="A(m)", margin_titles=False)
+    assert grid.facet_axes[0, 0].axes.get_title() == "A=1m, b=3.0"
+    assert grid.facet_axes[0, 1].axes.get_title() == "A=1m, b=4.0"
+    assert grid.facet_axes[0, 2].axes.get_title() == ""
+    assert grid.facet_axes[1, 0].axes.get_title() == ""
+    assert grid.facet_axes[1, 1].axes.get_title() == "A=2m, b=4.0"
+    assert grid.facet_axes[1, 2].axes.get_title() == "A=2m, b=5.0"
 
 
 def test_display(grid: FacetGrid) -> None:
