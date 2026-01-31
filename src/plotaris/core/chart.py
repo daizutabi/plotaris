@@ -107,7 +107,7 @@ class Chart:
         for data in group:
             kwargs: dict[str, Any] = {}
 
-            if self.palette:
+            if self.palette is not None:
                 kwargs.update(self.palette.get(data))
 
             if self.x is not None:
