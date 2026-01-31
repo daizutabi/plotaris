@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, override
 
 from matplotlib.ticker import EngFormatter
@@ -62,7 +62,7 @@ def _format(value: Any, fmt: Format | None, sep: str = "") -> str | tuple[str, s
 
 @dataclass
 class Label:
-    data: dict[str, Any]
+    data: dict[str, Any] = field(default_factory=dict)
     eq: str = "="
     sep: str = ", "
 
