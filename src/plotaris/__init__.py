@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .axes import axes_text, format_axes, format_axis, set_axes_log, set_axis_log
+from .core.axes import axes_text, format_axes, format_axis, set_axes_log, set_axis_log
 from .core.axisgrid import FacetGrid
 from .core.chart import Chart
 
