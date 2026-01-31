@@ -1,39 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from matplotlib.axis import XAxis
 from matplotlib.ticker import EngFormatter, FuncFormatter
+
+from plotaris.core.label import get_unit_seperator, split_precision
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.axis import YAxis
     from matplotlib.text import Text
-
-
-def _sep_unit(label: str) -> Literal["(", "["] | None:
-    if "(" in label and label.endswith(")"):
-        return "("
-    if "[" in label and label.endswith("]"):
-        return "["
-    return None
-
-
-def _split_places(label: str) -> tuple[str, int | None]:
-    sep = _sep_unit(label)
-
-    if not sep:
-        return label, None
-
-    _, unit = label.rsplit(sep, 1)
-
-    if ":" not in unit:
-        return label, None
-
-    suffix = label[-1]
-    label, places = label[:-1].rsplit(":", 1)
-
-    return f"{label}{suffix}", int(places)
 
 
 def _get_power(unit: str) -> int:
@@ -56,12 +33,12 @@ def format_axis(
     fontdict: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Text:
-    label, places = _split_places(label)
-    fmt = "g" if places is None else f".{places}f"
+    label, precision = split_precision(label)
+    fmt = "g" if precision is None else f".{precision}f"
 
     text = axis.set_label_text(label, fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
-    if sep := _sep_unit(label):
+    if sep := get_unit_seperator(label):
         _, unit = label[:-1].rsplit(sep, 1)
         scale = 10 ** _get_power(unit)
     else:
