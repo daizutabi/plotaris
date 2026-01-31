@@ -33,6 +33,28 @@ class FacetAxes(Facet):
         kwargs = {f.name: getattr(facet, f.name) for f in fields(facet)}
         return cls(**kwargs, axes=axes)
 
+    def set_title(
+        self,
+        formats: dict[str, Format | tuple[str, Format]] | None = None,
+        *,
+        dim: Literal["row", "col"] | None,
+        loc: Literal["top", "right"],
+        **kwargs: Format | tuple[str, Format],
+    ) -> Self:
+        self.label.dim = dim
+        label = self.label.format(formats, **kwargs)
+        if not label:
+            return self
+
+        if loc == "top":
+            self.axes.set_title(label)  # pyright: ignore[reportUnknownMemberType]
+        else:
+            ax = self.axes.twinx()
+            ax.set_yticks([])  # pyright: ignore[reportUnknownMemberType]
+            ax.set_ylabel(label)  # pyright: ignore[reportUnknownMemberType]
+
+        return self
+
 
 class FacetAxesCollection(FacetCollection[FacetAxes]):
     def get_axes(self, row: int, col: int) -> Axes | None:
@@ -390,17 +412,7 @@ class FacetGrid:
             dim: Literal["row", "col"] | None,
             loc: Literal["top", "right"],
         ) -> None:
-            facet_axes.label.dim = dim
-            label = facet_axes.label.format(formats, **kwargs)
-            if not label:
-                return
-
-            if loc == "top":
-                facet_axes.axes.set_title(label)  # pyright: ignore[reportUnknownMemberType]
-            else:
-                ax = facet_axes.axes.twinx()
-                ax.set_yticks([])  # pyright: ignore[reportUnknownMemberType]
-                ax.set_ylabel(label)  # pyright: ignore[reportUnknownMemberType]
+            facet_axes.set_title(formats, dim=dim, loc=loc, **kwargs)
 
         if margin_titles:
             self.facet_axes.filter(is_topmost=True).map(set_title, "col", "top")
