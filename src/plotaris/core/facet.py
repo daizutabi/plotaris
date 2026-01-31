@@ -1,22 +1,45 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from .group import Group
+from .label import Label
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
     import polars as pl
 
+    from .label import Format
 
-@dataclass(frozen=True)
+
+@dataclass
 class FacetLabel:
-    row: dict[str, Any]
+    row: Label
     """The label for the row dimension."""
-    col: dict[str, Any]
+    col: Label
     """The label for the column dimension."""
+    dim: Literal["row", "col"] | None = None
+    eq: str = "="
+    sep: str = ", "
+
+    def __post_init__(self) -> None:
+        self.row.eq = self.col.eq = self.eq
+        self.row.sep = self.col.sep = self.sep
+
+    def format(
+        self,
+        formats: dict[str, Format | tuple[str, Format]] | None = None,
+        /,
+        **kwargs: Format | tuple[str, Format],
+    ) -> str:
+        labels: list[str] = []
+        if self.dim != "col":
+            labels.append(self.row.format(formats, **kwargs))
+        if self.dim != "row":
+            labels.append(self.col.format(formats, **kwargs))
+        return self.sep.join(labels)
 
 
 @dataclass(frozen=True)
@@ -319,12 +342,14 @@ def _create_facet(
 
     if index is None:
         data = None
-        label = FacetLabel({}, {})
+        label = FacetLabel(Label(), Label())
 
     else:
         data = facet_data.group[index]
         labels = facet_data.group.labels(index)
-        label = FacetLabel(labels.get("row", {}), labels.get("col", {}))
+        row_label = Label(labels.get("row", {}))
+        col_label = Label(labels.get("col", {}))
+        label = FacetLabel(row_label, col_label)
 
     return Facet(
         data,

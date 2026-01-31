@@ -1,10 +1,34 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from plotaris.core.facet import Facet, FacetData
+from plotaris.core.facet import Facet, FacetData, FacetLabel
+from plotaris.core.label import Label
+
+
+@pytest.mark.parametrize(
+    ("dim", "expected"),
+    [
+        (None, "a=1, b=x, c=10, d=y"),
+        ("row", "a=1, b=x"),
+        ("col", "c=10, d=y"),
+    ],
+)
+def test_facet_label_format_dim(
+    dim: Literal["row", "col"] | None,
+    expected: str,
+) -> None:
+    label = FacetLabel(Label({"a": 1, "b": "x"}), Label({"c": 10, "d": "y"}), dim=dim)
+    assert label.format() == expected
+
+
+def test_facet_label_format_format() -> None:
+    label = FacetLabel(Label({"a": 1e5}), Label({"b": 2.1234e-5}), sep=";", eq="~")
+    assert label.format({"b": ("B", "_{:.2g}_")}, a="A(V)") == "A~100kV;B~_2.1e-05_"
 
 
 @pytest.fixture(scope="module")
@@ -214,17 +238,17 @@ def test_facet_data_boundary_attrs(
 
 def test_facet_label(facet_data_2x3: FacetData) -> None:
     facet_0_0 = facet_data_2x3[0, 0]
-    assert facet_0_0.label.row == {"a": 1}
-    assert facet_0_0.label.col == {"b": 3}
+    assert facet_0_0.label.row.data == {"a": 1}
+    assert facet_0_0.label.col.data == {"b": 3}
 
     facet_0_2 = facet_data_2x3[0, 2]
-    assert facet_0_2.label.row == {}
-    assert facet_0_2.label.col == {}
+    assert facet_0_2.label.row.data == {}
+    assert facet_0_2.label.col.data == {}
 
     facet_data_row_only = FacetData(facet_data_2x3.group.data[0], row="a")
     facet = facet_data_row_only[0, 0]
-    assert facet.label.row == {"a": 1}
-    assert facet.label.col == {}
+    assert facet.label.row.data == {"a": 1}
+    assert facet.label.col.data == {}
 
 
 def test_facet_collection_filter_has_data(facet_data_2x3: FacetData) -> None:
