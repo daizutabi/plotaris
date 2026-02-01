@@ -439,7 +439,7 @@ class FacetGrid:
             dim: Literal["row", "col"] | None,
             loc: Literal["top", "right"],
         ) -> None:
-            if not margin_titles:
+            if dim is None:
                 fa = facet_axes
             elif loc == "top":
                 row, col = 0, facet_axes.col
