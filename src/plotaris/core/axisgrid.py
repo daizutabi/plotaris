@@ -39,6 +39,7 @@ class FacetAxes(Facet):
         *,
         dim: Literal["row", "col"] | None,
         loc: Literal["top", "right"],
+        ax: Axes | None = None,
         **kwargs: Format | tuple[str, Format],
     ) -> Self:
         """Set a title on the `Axes` object for this facet.
@@ -52,6 +53,8 @@ class FacetAxes(Facet):
             dim: The facet dimension ("row" or "col") to use for the title.
                 If `None`, all dimensions are used.
             loc: The location of the title, either "top" or "right".
+            ax: An optional `Axes` object to set the title on. If `None`,
+                uses the `axes` attribute of the `FacetAxes`.
             **kwargs: Additional per-key format specifiers provided as keyword
                 arguments, merged with `formats`.
 
@@ -63,10 +66,12 @@ class FacetAxes(Facet):
         if not label:
             return self
 
+        ax = ax or self.axes
+
         if loc == "top":
-            self.axes.set_title(label)  # pyright: ignore[reportUnknownMemberType]
+            ax.set_title(label)  # pyright: ignore[reportUnknownMemberType]
         else:
-            ax = self.axes.twinx()
+            ax = ax.twinx()
             ax.set_yticks([])  # pyright: ignore[reportUnknownMemberType]
             ax.set_ylabel(label)  # pyright: ignore[reportUnknownMemberType]
 
@@ -193,13 +198,14 @@ class FacetGrid:
         data: pl.DataFrame,
         row: str | Iterable[str] | None = None,
         col: str | Iterable[str] | None = None,
-        *,
         wrap: int | None = None,
+        *,
         sharex: bool | Literal["none", "all", "row", "col"] = True,
         sharey: bool | Literal["none", "all", "row", "col"] = True,
         constrained_layout: bool = True,
         subplot_kw: dict[str, Any] | None = None,
         gridspec_kw: dict[str, Any] | None = None,
+        figure: Figure | None = None,
         **fig_kw: Any,
     ) -> None:
         """Initialize the FacetGrid.
@@ -218,22 +224,26 @@ class FacetGrid:
             subplot_kw: Keyword arguments passed to `matplotlib.pyplot.subplots`
                 for each subplot.
             gridspec_kw: Keyword arguments passed to the `GridSpec` constructor.
+            figure: An optional `Figure` object to use for the grid.
             **fig_kw: Additional keyword arguments passed to
                 `matplotlib.pyplot.figure`.
         """
         self.data = data
         self.facet_data = FacetData(data, row, col, wrap)
 
-        self.figure, axes = plt.subplots(  # pyright: ignore[reportUnknownMemberType]
+        self.figure = figure or plt.figure(  # pyright: ignore[reportUnknownMemberType]
+            constrained_layout=constrained_layout,
+            **fig_kw,
+        )
+
+        axes = self.figure.subplots(
             self.facet_data.nrows,
             self.facet_data.ncols,
             squeeze=False,
             sharex=sharex,
             sharey=sharey,
-            constrained_layout=constrained_layout,
             subplot_kw=subplot_kw,
             gridspec_kw=gridspec_kw,
-            **fig_kw,
         )
 
         facets = self.facet_data.facets
@@ -429,9 +439,19 @@ class FacetGrid:
             dim: Literal["row", "col"] | None,
             loc: Literal["top", "right"],
         ) -> None:
-            facet_axes.set_title(formats, dim=dim, loc=loc, **kwargs)
+            row, col = facet_axes.row, facet_axes.col
+            n = self.facet_data.ncols * self.facet_data.nrows
 
-        if margin_titles:
+            if n != len(self.facet_axes) or not margin_titles:
+                ax = facet_axes.axes
+            elif loc == "top":
+                ax = self.facet_axes[0, col].axes
+            else:
+                ax = self.facet_axes[row, self.facet_data.ncols - 1].axes
+
+            facet_axes.set_title(formats, dim=dim, loc=loc, ax=ax, **kwargs)
+
+        if margin_titles and self.facet_data.wrap is None:
             self.facet_axes.filter(is_topmost=True).map(set_title, "col", "top")
             self.facet_axes.filter(is_rightmost=True).map(set_title, "row", "right")
         else:

@@ -9,16 +9,19 @@ from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 from plotaris.utils import to_tuple
 
+from .axisgrid import FacetGrid
 from .group import Group
 from .palette import Palette
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     import polars as pl
     from matplotlib.axes import Axes
 
     from plotaris.marks.base import Mark
+
+    from .palette import VisualValue
 
 
 class Chart:
@@ -33,14 +36,34 @@ class Chart:
     wrap: int | None = None
     palette: Palette | None = None
     mark: Mark | None = None
+    _kwargs: dict[str, Any]
 
-    def __init__(self, data: pl.DataFrame) -> None:
+    def __init__(
+        self,
+        data: pl.DataFrame,
+        figsize: tuple[float, float] | None = None,
+        **kwargs: Any,
+    ) -> None:
         self.data = data
+        self._kwargs = kwargs
+
+        if figsize is not None:
+            self._kwargs["figsize"] = figsize
+
+    @property
+    def encoding(self) -> dict[str, tuple[str, ...]]:
+        names = ["color", "size", "shape"]
+        return {name: value for name in names if (value := getattr(self, name))}
+
+    @property
+    def has_facet(self) -> bool:
+        return bool(self.row or self.col)
 
     def encode(
         self,
         x: str | pl.Expr | None = None,
         y: str | pl.Expr | None = None,
+        *,
         color: str | Iterable[str] | None = None,
         size: str | Iterable[str] | None = None,
         shape: str | Iterable[str] | None = None,
@@ -66,6 +89,15 @@ class Chart:
 
         return self
 
+    def mapping(
+        self,
+        /,
+        **mapping: Mapping[Any | tuple[Any, ...], VisualValue],
+    ) -> Self:
+        if self.palette is not None:
+            self.palette.mapping(**mapping).set(self.data)
+        return self
+
     def facet(
         self,
         row: str | Iterable[str] | None = None,
@@ -77,11 +109,6 @@ class Chart:
         self.wrap = wrap
 
         return self
-
-    @property
-    def encoding(self) -> dict[str, tuple[str, ...]]:
-        names = ["color", "size", "shape"]
-        return {name: value for name in names if (value := getattr(self, name))}
 
     def mark_point(self, **kwargs: Any) -> Self:
         self.mark = PointMark(**kwargs)
@@ -95,40 +122,46 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    def display(self, ax: Axes | None = None) -> Axes:
+    def _get_kwargs(self, data: pl.DataFrame) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
+
+        if self.palette is not None:
+            kwargs.update(self.palette.get(data))
+
+        if self.x is not None:
+            kwargs["x"] = data.select(self.x).to_series()
+
+        if self.y is not None:
+            kwargs["y"] = data.select(self.y).to_series()
+
+        return kwargs
+
+    def _display_axes(self, data: pl.DataFrame, ax: Axes | None = None) -> Axes:
         if ax is None:
-            ax = plt.figure().add_subplot()  # pyright: ignore[reportUnknownMemberType]
+            ax = plt.gca()
 
         if not self.mark:
             return ax
 
-        group = Group(self.data, **self.encoding)
+        group = Group(data, **self.encoding)
 
-        for data in group:
-            kwargs: dict[str, Any] = {}
-
-            if self.palette is not None:
-                kwargs.update(self.palette.get(data))
-
-            if self.x is not None:
-                kwargs["x"] = data.select(self.x).to_series()
-
-            if self.y is not None:
-                kwargs["y"] = data.select(self.y).to_series()
-
+        for df in group:
+            kwargs = self._get_kwargs(df)
             self.mark.plot(ax, **kwargs)
 
         return ax
 
-    #     if self.mark is None:
-    #         msg = "Mark must be defined before displaying the chart"
-    #         raise ValueError(msg)
+    def to_facet(self) -> FacetGrid:
+        grid = FacetGrid(self.data, self.row, self.col, self.wrap, **self._kwargs)
+        grid.map_dataframe(self._display_axes)
+        return grid
 
-    #     facet_spec = self.facet_spec or FacetSpec()
-    #     grid = FacetGrid(self.data, self.encoding, facet_spec, ax=ax)
-    #     grid.plot(self.mark, self.encoding)
+    def display(self) -> Axes | FacetGrid:
+        if self.has_facet:
+            return self.to_facet()
 
-    #     return grid.axes.squeeze() if grid.axes.size == 1 else grid.axes
+        ax = plt.figure(**self._kwargs).add_subplot()  # pyright: ignore[reportUnknownMemberType]
+        return self._display_axes(self.data, ax=ax)
 
-    def _display_(self) -> Axes:
+    def _display_(self) -> Axes | FacetGrid:
         return self.display()

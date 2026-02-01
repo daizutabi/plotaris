@@ -20,8 +20,23 @@ def _():
 
 @app.cell
 def _(data):
-    chart = Chart(data).encode("x", "y", color="a").mark_point()
+    chart = (
+        Chart(data, figsize=(4, 2))
+        .encode("x", "y", color="x", shape="y")
+        .facet(row="a", col="x")
+        .mapping(color={3: "pink"})
+        .mark_point()
+        .to_facet()
+        # .delaxes()
+        .set_titles()
+    )
     chart
+    return (chart,)
+
+
+@app.cell
+def _(chart):
+    chart.facet_data.nrows
     return
 
 
