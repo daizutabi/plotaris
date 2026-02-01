@@ -153,7 +153,8 @@ class Chart:
 
     def to_facet(self) -> FacetGrid:
         grid = FacetGrid(self.data, self.row, self.col, self.wrap, **self._kwargs)
-        grid.map_dataframe(self._display_axes)
+        if self.mark:
+            grid.map_dataframe(self._display_axes)
         return grid
 
     def display(self) -> Axes | FacetGrid:
