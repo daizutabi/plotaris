@@ -439,17 +439,16 @@ class FacetGrid:
             dim: Literal["row", "col"] | None,
             loc: Literal["top", "right"],
         ) -> None:
-            row, col = facet_axes.row, facet_axes.col
-            n = self.facet_data.ncols * self.facet_data.nrows
-
-            if n != len(self.facet_axes) or not margin_titles:
-                ax = facet_axes.axes
+            if not margin_titles:
+                fa = facet_axes
             elif loc == "top":
-                ax = self.facet_axes[0, col].axes
+                row, col = 0, facet_axes.col
+                fa = self.facet_axes.get(row, col) or facet_axes
             else:
-                ax = self.facet_axes[row, self.facet_data.ncols - 1].axes
+                row, col = facet_axes.row, self.facet_data.ncols - 1
+                fa = self.facet_axes.get(row, col) or facet_axes
 
-            facet_axes.set_title(formats, dim=dim, loc=loc, ax=ax, **kwargs)
+            facet_axes.set_title(formats, dim=dim, loc=loc, ax=fa.axes, **kwargs)
 
         if margin_titles and self.facet_data.wrap is None:
             self.facet_axes.filter(is_topmost=True).map(set_title, "col", "top")
