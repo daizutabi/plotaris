@@ -58,16 +58,34 @@ target-version = "py312"
 include = ["src/**/*.py", "tests/**/*.py"]
 
 [tool.ruff.lint]
+preview = true
 select = ["ALL"]
 unfixable = ["F401"]
-ignore = ["ANN401", "ARG001", "C901", "D", "ERA001", "PLR0913", "PLR2004"]
+ignore = [
+  "ANN401",
+  "ARG001",
+  "C901",
+  "CPY",
+  "D",
+  "DOC201",
+  "DOC402",
+  "ERA001",
+  "PLR0913",
+  "PLR0917",
+  "PLR2004",
+  "PLW3201",
+  "RUF001",
+]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["A001", "ANN", "ARG", "FBT", "PLR", "PT", "S", "SLF"]
+"tests/*" = ["A001", "ANN", "ARG", "FBT", "PLC1901", "PLR", "PT", "S", "SLF"]
 "notebooks/*" = ["ANN", "ARG", "B", "I002", "INP", "PLC", "PLR", "SLF"]
+
+[tool.ruff.format]
+preview = true
 
 [tool.basedpyright]
 include = ["src", "tests"]

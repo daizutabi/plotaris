@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import starmap
 from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
@@ -67,7 +68,7 @@ def test_facet_axes_filter(
     rcs: list[tuple[int, int]],
 ) -> None:
     result = grid.facet_axes.filter(predicate=None, **{name: True}).axes
-    expected = [grid.facet_axes.get_axes(*rc) for rc in rcs]
+    expected = list(starmap(grid.facet_axes.get_axes, rcs))
     assert result == expected
 
 
@@ -96,7 +97,7 @@ def test_axes_property_after_delaxes(
     rcs: list[tuple[int, int]],
 ) -> None:
     result = grid_delaxes.facet_axes.filter(predicate=None, **{name: True}).axes
-    expected = [grid_delaxes.facet_axes.get_axes(*rc) for rc in rcs]
+    expected = list(starmap(grid_delaxes.facet_axes.get_axes, rcs))
     assert result == expected
 
 

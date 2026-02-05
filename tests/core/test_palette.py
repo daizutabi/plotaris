@@ -55,7 +55,8 @@ def test_base_mapping_default(
     value: int,
 ) -> None:
     result = (
-        base.mapping(size={("A", 1): 100, ("A", 2): 200})
+        base
+        .mapping(size={("A", 1): 100, ("A", 2): 200})
         .default(size=[1, 2, 3])
         .set(data)
         .get(data.row(index, named=True))
@@ -75,7 +76,8 @@ def test_base_default(
     shape: str,
 ) -> None:
     result = (
-        base.default(color=[1, 2], shape=["o", "s", "^"])
+        base
+        .default(color=[1, 2], shape=["o", "s", "^"])
         .set(data)
         .get(data.row(index, named=True))
     )
@@ -101,7 +103,8 @@ def test_base_mapping(
     shape: str | None,
 ) -> None:
     result = (
-        base.mapping(color={"A": 1, "B": 2}, shape={(10,): "o", (20,): "s"})
+        base
+        .mapping(color={"A": 1, "B": 2}, shape={(10,): "o", (20,): "s"})
         .set(data)
         .get(data.row(index, named=True))
     )
