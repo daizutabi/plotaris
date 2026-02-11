@@ -293,14 +293,14 @@ class Group:
         """
         if index is not None:
             labels = {d: self.keys(d).row(index, named=True) for d in self.mapping}
-            return _merge(labels) if merge else labels
+            return _merge(labels.values()) if merge else labels
 
         dim_keys = self.dimension_keys()
         return [_label(dim_keys, i, merge=merge) for i in range(len(self))]
 
 
-def _merge(labels: dict[str, dict[str, Any]], /) -> dict[str, Any]:
-    return reduce(lambda x, y: {**x, **y}, labels.values())
+def _merge(values: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    return reduce(lambda x, y: {**x, **y}, values)
 
 
 def _label(
@@ -310,4 +310,4 @@ def _label(
     merge: bool,
 ) -> dict[str, dict[str, Any]] | dict[str, Any]:
     labels = {dim: keys.row(index, named=True) for dim, keys in dim_keys.items()}
-    return _merge(labels) if merge else labels
+    return _merge(labels.values()) if merge else labels

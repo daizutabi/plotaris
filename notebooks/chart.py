@@ -30,16 +30,23 @@ def func(x, y, label, **kwargs):
 def _(data):
     chart = (
         Chart(data, figsize=(4, 2))
-        .encode("x", "y", color="x", shape=("y", "x"))
+        .encode("x", "y", color="x", shape="y")
         .mapping(color={1: "blue", 3: "pink"}, shape={5: "+"})
         # .map(func)
         .mark_point(s=5)
-        .facet("a", "x")
-        .select(row=0, col=0)
+        .label(eq="")
+        # .facet("a", "x")
+        # .select(row=0, col=0)
         .legend(fontsize=6)
         # .set_titles()
     )
     chart
+    return (chart,)
+
+
+@app.cell
+def _(chart):
+    chart.encoding
     return
 
 

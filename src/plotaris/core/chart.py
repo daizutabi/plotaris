@@ -11,6 +11,7 @@ from plotaris.utils import to_tuple
 
 from .axisgrid import FacetGrid
 from .group import Group
+from .label import Label
 from .palette import Palette
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
     from plotaris.marks.base import Mark
 
+    from .label import Format
     from .palette import VisualValue
 
 
@@ -35,6 +37,7 @@ class Chart:
     mark: Mark | None = None
     plot: Callable[..., Any] | None = None
     axes: Axes | None = None
+    _label: Label
     _kwargs: dict[str, Any]
 
     def __init__(
@@ -44,6 +47,7 @@ class Chart:
         **kwargs: Any,
     ) -> None:
         self.data = data
+        self._label = Label()
         self._kwargs = kwargs
 
         if figsize is not None:
@@ -105,6 +109,18 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
+    def label(
+        self,
+        formats: dict[str, Format | tuple[str, Format]] | None = None,
+        /,
+        eq: str = "=",
+        sep: str = ", ",
+        unit_sep: str = "",
+        **kwargs: Format | tuple[str, Format],
+    ) -> Self:
+        self._label = Label(eq=eq, sep=sep, unit_sep=unit_sep).fmt(formats, **kwargs)
+        return self
+
     def _get_series(self, data: pl.DataFrame, **kwargs: Any) -> dict[str, Any]:
         if self.palette is not None:
             kwargs.update(self.palette.get(data))
@@ -119,7 +135,8 @@ class Chart:
 
     def _iter_series(self, data: pl.DataFrame) -> Iterator[dict[str, Any]]:
         group = Group(data, **self.encoding)
-        for df, label in zip(group, group.labels(merge=True), strict=True):
+        for df, label_ in zip(group, group.labels(merge=True), strict=True):
+            label = self._label.set(label_).format()
             yield self._get_series(df, label=label)
 
     def _plot_series(self, data: pl.DataFrame) -> None:

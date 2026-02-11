@@ -10,7 +10,7 @@ allowing for concise representation of scientific and engineering data.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Self, override
 
 from matplotlib.ticker import EngFormatter
 
@@ -71,11 +71,20 @@ class Label:
     eq: str = "="
     sep: str = ", "
     unit_sep: str = ""
+    _fmt: dict[str, Format | tuple[str, Format]] = field(default_factory=dict)
 
-    @override
-    def __str__(self) -> str:
-        """Returns a simple string representation of the label data."""
-        return self.sep.join(f"{k}{self.eq}{v}" for k, v in self.data.items())
+    def set(self, data: dict[str, Any]) -> Self:
+        self.data = data
+        return self
+
+    def fmt(
+        self,
+        formats: dict[str, Format | tuple[str, Format]] | None = None,
+        /,
+        **kwargs: Format | tuple[str, Format],
+    ) -> Self:
+        self._fmt = (formats or {}) | kwargs
+        return self
 
     def format(
         self,
@@ -108,7 +117,7 @@ class Label:
         Returns:
             The final formatted string.
         """
-        formats = (formats or {}) | kwargs
+        formats = self._fmt | (formats or {}) | kwargs
 
         parts: list[str] = []
 
@@ -117,9 +126,12 @@ class Label:
             key_, fmt = fmt if isinstance(fmt, tuple) else (key, fmt)
             formatted = _format(value, fmt, self.unit_sep)  # ty: ignore[invalid-argument-type]
 
-            if isinstance(formatted, tuple):
-                parts.append(f"{formatted[0] or key_}{self.eq}{formatted[1]}")
-            else:
-                parts.append(f"{key_}{self.eq}{formatted}")
+            k, v = formatted if isinstance(formatted, tuple) else (key_, formatted)
+            parts.append(f"{k or key_}{self.eq}{v}" if self.eq else str(v))
 
         return self.sep.join(parts)
+
+    @override
+    def __str__(self) -> str:
+        """Returns a simple string representation of the label data."""
+        return self.format()
