@@ -28,8 +28,8 @@ Issues = "https://github.com/daizutabi/plotaris/issues"
 [dependency-groups]
 dev = [
   "basedpyright>=1.36.1",
-  "marimo>=0.18.4",
-  "prek>=0.2.22",
+  "marimo>=0.19.4",
+  "prek>=0.3.2",
   "pytest>=9.0.2",
   "pytest-clarity>=1.0.1",
   "pytest-cov>=7.0.0",
@@ -37,7 +37,7 @@ dev = [
   "pytest-randomly>=4.0.1",
   "pytest-xdist>=3.8.0",
   "ruff>=0.14.10",
-  "ty>=0.0.4",
+  "ty>=0.0.16",
   "watchdog>=6.0.0",
 ]
 
