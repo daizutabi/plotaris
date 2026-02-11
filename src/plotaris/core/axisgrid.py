@@ -458,6 +458,11 @@ class FacetGrid:
 
         return self
 
+    def legend(self, *args: Any, **kwargs: Any) -> Self:
+        facet_axes = self.facet_axes.filter(has_data=True)
+        facet_axes.map_axes(lambda ax: ax.legend(*args, **kwargs))  # pyright: ignore[reportUnknownMemberType]
+        return self
+
     def _display_(self) -> Figure:
         """Return the figure for display in IPython environments."""
         return self.figure

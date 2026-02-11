@@ -193,11 +193,18 @@ def test_group_columns_str_str(data: pl.DataFrame) -> None:
     assert_frame_equal(dim["col"], expected.select("b"))
 
     assert gr.labels(1) == {"row": {"a": 1}, "col": {"b": 4}}
+    assert gr.labels(2, merge=True) == {"a": 2, "b": 4}
     assert gr.labels() == [
         {"row": {"a": 1}, "col": {"b": 3}},
         {"row": {"a": 1}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 4}},
         {"row": {"a": 2}, "col": {"b": 5}},
+    ]
+    assert gr.labels(merge=True) == [
+        {"a": 1, "b": 3},
+        {"a": 1, "b": 4},
+        {"a": 2, "b": 4},
+        {"a": 2, "b": 5},
     ]
 
 
@@ -216,6 +223,15 @@ def test_group_columns_str_str_duplicated(data: pl.DataFrame) -> None:
     assert_frame_equal(dim["row"], expected)
     assert_frame_equal(dim["col"], expected)
 
+    assert gr.labels(1) == {"row": {"b": 4}, "col": {"b": 4}}
+    assert gr.labels(2, merge=True) == {"b": 5}
+    assert gr.labels() == [
+        {"row": {"b": 3}, "col": {"b": 3}},
+        {"row": {"b": 4}, "col": {"b": 4}},
+        {"row": {"b": 5}, "col": {"b": 5}},
+    ]
+    assert gr.labels(merge=True) == [{"b": 3}, {"b": 4}, {"b": 5}]
+
 
 def test_group_columns_tuple(data: pl.DataFrame) -> None:
     gr = Group(data, row=("a", "b"))
@@ -230,6 +246,21 @@ def test_group_columns_tuple(data: pl.DataFrame) -> None:
 
     dim = gr.dimension_keys()
     assert_frame_equal(dim["row"], expected)
+
+    assert gr.labels(1) == {"row": {"a": 1, "b": 4}}
+    assert gr.labels(2, merge=True) == {"a": 2, "b": 4}
+    assert gr.labels() == [
+        {"row": {"a": 1, "b": 3}},
+        {"row": {"a": 1, "b": 4}},
+        {"row": {"a": 2, "b": 4}},
+        {"row": {"a": 2, "b": 5}},
+    ]
+    assert gr.labels(merge=True) == [
+        {"a": 1, "b": 3},
+        {"a": 1, "b": 4},
+        {"a": 2, "b": 4},
+        {"a": 2, "b": 5},
+    ]
 
 
 def test_group_columns_tuple_str(data: pl.DataFrame) -> None:
@@ -246,6 +277,21 @@ def test_group_columns_tuple_str(data: pl.DataFrame) -> None:
     dim = gr.dimension_keys()
     assert_frame_equal(dim["row"], expected)
     assert_frame_equal(dim["col"], expected.select("a"))
+
+    assert gr.labels(1) == {"row": {"b": 4, "a": 1}, "col": {"a": 1}}
+    assert gr.labels(2, merge=True) == {"b": 4, "a": 2}
+    assert gr.labels() == [
+        {"row": {"b": 3, "a": 1}, "col": {"a": 1}},
+        {"row": {"b": 4, "a": 1}, "col": {"a": 1}},
+        {"row": {"b": 4, "a": 2}, "col": {"a": 2}},
+        {"row": {"b": 5, "a": 2}, "col": {"a": 2}},
+    ]
+    assert gr.labels(merge=True) == [
+        {"a": 1, "b": 3},
+        {"a": 1, "b": 4},
+        {"a": 2, "b": 4},
+        {"a": 2, "b": 5},
+    ]
 
 
 def test_group_columns_str_empty(data: pl.DataFrame) -> None:

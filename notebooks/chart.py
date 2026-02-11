@@ -19,32 +19,27 @@ def _():
 
 
 @app.function
-def func(x, y, **kwargs):
-    print(kwargs)
+def func(x, y, label, **kwargs):
+    print(label)
     ax = plt.gca()
-    ax.scatter(x, y)
+    ax.scatter(x, y, label=f"{kwargs['color']}")
+    ax.legend(fontsize=4)
 
 
 @app.cell
 def _(data):
     chart = (
         Chart(data, figsize=(4, 2))
-        .encode("x", "y", color="x", shape="y")
-        .mapping(color={3: "pink"}, shape={5: "+"})
-        .mark_point()
-        .map(func)
+        .encode("x", "y", color="x", shape=("y", "x"))
+        .mapping(color={1: "blue", 3: "pink"}, shape={5: "+"})
+        # .map(func)
+        .mark_point(s=5)
         .facet("a", "x")
-        # .to_facet()
-        # .delaxes()
+        .select(row=0, col=0)
+        .legend(fontsize=6)
         # .set_titles()
     )
     chart
-    return (chart,)
-
-
-@app.cell
-def _(chart):
-    type(chart)
     return
 
 

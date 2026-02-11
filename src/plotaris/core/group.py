@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 
@@ -222,37 +223,91 @@ class Group:
         return {dim: self.keys(dim) for dim in self.mapping}
 
     @overload
-    def labels(self, index: int) -> dict[str, dict[str, Any]]: ...
+    def labels(
+        self,
+        index: int,
+        *,
+        merge: Literal[False] = False,
+    ) -> dict[str, dict[str, Any]]: ...
 
     @overload
-    def labels(self, index: None = None) -> list[dict[str, dict[str, Any]]]: ...
+    def labels(
+        self,
+        index: int,
+        *,
+        merge: Literal[True],
+    ) -> dict[str, Any]: ...
+
+    @overload
+    def labels(
+        self,
+        index: None = None,
+        *,
+        merge: Literal[False] = False,
+    ) -> list[dict[str, dict[str, Any]]]: ...
+
+    @overload
+    def labels(
+        self,
+        index: None = None,
+        *,
+        merge: Literal[True],
+    ) -> list[dict[str, Any]]: ...
 
     def labels(
         self,
         index: int | None = None,
-    ) -> dict[str, dict[str, Any]] | list[dict[str, dict[str, Any]]]:
+        *,
+        merge: bool = False,
+    ):
         """Gets the labels for one or all data groups.
 
         Each group is defined by a unique combination of values from the columns
-        specified in the dimensions. This method retrieves these values.
+        specified in the dimensions. This method retrieves these values as labels.
 
         Args:
             index: The integer index of a specific group. If None (default),
                 labels for all groups are returned.
+            merge: If True, the dictionaries for each dimension are merged into
+                a single dictionary. Defaults to False.
 
         Returns:
-            If `index` is an integer, returns a dictionary mapping dimension names
-            to the key-value pairs for that group.
-            Example: `{"row": {"col_a": 1}, "col": {"col_b": "x"}}`
+            A dictionary or list of dictionaries representing the group labels.
+            The structure depends on the `index` and `merge` arguments:
 
-            If `index` is None, returns a list of these dictionaries, with one
-            entry for each group.
+            - `index` is `int`, `merge=False` (default):
+              Returns a dictionary mapping dimension names to the key-value pairs
+              for that group.
+              `{"row": {"var1": "a"}, "col": {"var2": 1}}`
+
+            - `index` is `int`, `merge=True`:
+              Returns a single dictionary with all key-value pairs merged.
+              `{"var1": "a", "var2": 1}`
+
+            - `index` is `None`, `merge=False` (default):
+              Returns a list of dictionaries, one for each group, structured
+              as in the first case.
+
+            - `index` is `None`, `merge=True`:
+              Returns a list of merged dictionaries, one for each group.
         """
         if index is not None:
-            return {dim: self.keys(dim).row(index, named=True) for dim in self.mapping}
+            labels = {d: self.keys(d).row(index, named=True) for d in self.mapping}
+            return _merge(labels) if merge else labels
 
         dim_keys = self.dimension_keys()
-        return [
-            {dim: keys.row(i, named=True) for dim, keys in dim_keys.items()}
-            for i in range(len(self))
-        ]
+        return [_label(dim_keys, i, merge=merge) for i in range(len(self))]
+
+
+def _merge(labels: dict[str, dict[str, Any]], /) -> dict[str, Any]:
+    return reduce(lambda x, y: {**x, **y}, labels.values())
+
+
+def _label(
+    dim_keys: dict[str, pl.DataFrame],
+    index: int,
+    *,
+    merge: bool,
+) -> dict[str, dict[str, Any]] | dict[str, Any]:
+    labels = {dim: keys.row(index, named=True) for dim, keys in dim_keys.items()}
+    return _merge(labels) if merge else labels
