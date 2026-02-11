@@ -82,17 +82,25 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["A001", "ANN", "ARG", "FBT", "PLC1901", "PLR", "PT", "S", "SLF"]
-"notebooks/*" = ["ANN", "ARG", "B", "I002", "INP", "PLC", "PLR", "SLF"]
+"notebooks/*" = ["ANN", "ARG", "B", "I002", "INP", "PLC", "PLR", "RUF", "SLF"]
 
 [tool.ruff.format]
 preview = true
 
 [tool.basedpyright]
 include = ["src", "tests"]
-ignore = ["notebooks"]
 reportAny = false
 reportExplicitAny = false
 reportUnusedCallResult = false
+
+[[tool.basedpyright.executionEnvironments]]
+root = "notebooks"
+reportMissingParameterType = false
+reportUnknownArgumentType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnusedExpression = false
+
 
 [tool.ty.src]
 include = ["src", "tests"]
