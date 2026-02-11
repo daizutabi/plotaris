@@ -113,6 +113,30 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
 
         return self
 
+    def map_axes[**P](
+        self,
+        func: Callable[Concatenate[Axes, P], Any],
+        /,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> Self:
+        """Apply a function to each axes in the collection.
+
+        The function is called with the `Axes` object as the first argument.
+
+        Args:
+            func: A callable that accepts a `Axes` object as the first argument.
+            *args: Additional positional arguments to pass to `func`.
+            **kwargs: Additional keyword arguments to pass to `func`.
+
+        Returns:
+            The collection instance for method chaining.
+        """
+        for axes in self.axes:
+            func(axes, *args, **kwargs)
+
+        return self
+
     def map_dataframe[**P](
         self,
         func: Callable[Concatenate[pl.DataFrame, P], Any],
@@ -139,30 +163,6 @@ class FacetAxesCollection(FacetCollection[FacetAxes]):
             if facet_axes.data is not None:
                 plt.sca(facet_axes.axes)
                 func(facet_axes.data, *args, **kwargs)
-
-        return self
-
-    def map_axes[**P](
-        self,
-        func: Callable[Concatenate[Axes, P], Any],
-        /,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> Self:
-        """Apply a function to each axes in the collection.
-
-        The function is called with the `Axes` object as the first argument.
-
-        Args:
-            func: A callable that accepts a `Axes` object as the first argument.
-            *args: Additional positional arguments to pass to `func`.
-            **kwargs: Additional keyword arguments to pass to `func`.
-
-        Returns:
-            The collection instance for method chaining.
-        """
-        for axes in self.axes:
-            func(axes, *args, **kwargs)
 
         return self
 
