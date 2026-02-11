@@ -14,7 +14,7 @@ from .group import Group
 from .palette import Palette
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     import polars as pl
     from matplotlib.axes import Axes
@@ -36,6 +36,7 @@ class Chart:
     wrap: int | None = None
     palette: Palette | None = None
     mark: Mark | None = None
+    _plot: Callable[..., Any] | None = None
     _kwargs: dict[str, Any]
 
     def __init__(
@@ -110,6 +111,10 @@ class Chart:
 
         return self
 
+    def map(self, plot: Callable[..., Any], /) -> Self:
+        self._plot = plot
+        return self
+
     def mark_point(self, **kwargs: Any) -> Self:
         self.mark = PointMark(**kwargs)
         return self
@@ -122,7 +127,7 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    def _get_kwargs(self, data: pl.DataFrame) -> dict[str, Any]:
+    def _get_series(self, data: pl.DataFrame) -> dict[str, Any]:
         kwargs: dict[str, Any] = {}
 
         if self.palette is not None:
@@ -136,25 +141,20 @@ class Chart:
 
         return kwargs
 
-    def _display_axes(self, data: pl.DataFrame, ax: Axes | None = None) -> Axes:
-        if ax is None:
-            ax = plt.gca()
-
-        if not self.mark:
-            return ax
-
+    def _iter_series(self, data: pl.DataFrame) -> Iterator[dict[str, Any]]:
         group = Group(data, **self.encoding)
+        return map(self._get_series, group)
 
-        for df in group:
-            kwargs = self._get_kwargs(df)
-            self.mark.plot(ax, **kwargs)
-
-        return ax
+    def _plot_series(self, data: pl.DataFrame) -> None:
+        for series in self._iter_series(data):
+            if self._plot:
+                self._plot(**series)
+            if self.mark:
+                self.mark.plot(**series)
 
     def to_facet(self) -> FacetGrid:
         grid = FacetGrid(self.data, self.row, self.col, self.wrap, **self._kwargs)
-        if self.mark:
-            grid.map_dataframe(self._display_axes)
+        grid.map_dataframe(self._plot_series)
         return grid
 
     def display(self) -> Axes | FacetGrid:
@@ -162,7 +162,8 @@ class Chart:
             return self.to_facet()
 
         ax = plt.figure(**self._kwargs).add_subplot()  # pyright: ignore[reportUnknownMemberType]
-        return self._display_axes(self.data, ax=ax)
+        self._plot_series(self.data)
+        return ax
 
     def _display_(self) -> Axes | FacetGrid:
         return self.display()

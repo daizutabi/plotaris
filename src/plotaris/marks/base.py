@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar
 
+import matplotlib.pyplot as plt
+
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
@@ -16,9 +18,9 @@ class Mark(ABC):
         self.args = args
         self.kwargs = kwargs
 
-    def plot(self, ax: Axes, **kwargs: Any) -> None:
+    def plot(self, **kwargs: Any) -> None:
         kwargs = {self.kwargs_map.get(k, k): v for k, v in kwargs.items()}
-        self._plot(ax, *self.args, **self.kwargs, **kwargs)
+        self._plot(plt.gca(), *self.args, **self.kwargs, **kwargs)
 
     @abstractmethod
     def _plot(self, ax: Axes, *args: Any, **kwargs: Any) -> None: ...

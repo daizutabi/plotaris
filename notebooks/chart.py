@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.7"
+__generated_with = "0.19.9"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -18,17 +18,25 @@ def _():
     return (data,)
 
 
+@app.function
+def func(x, y, **kwargs):
+    print(kwargs)
+    ax = plt.gca()
+    ax.scatter(x, y)
+
+
 @app.cell
 def _(data):
     chart = (
         Chart(data, figsize=(4, 2))
         .encode("x", "y", color="x", shape="y")
-        .facet(row="a", col="x")
-        .mapping(color={3: "pink"})
+        .mapping(color={3: "pink"}, shape={5: "+"})
         .mark_point()
-        .to_facet()
+        .map(func)
+        .facet("a", "x")
+        # .to_facet()
         # .delaxes()
-        .set_titles()
+        # .set_titles()
     )
     chart
     return (chart,)
@@ -36,7 +44,7 @@ def _(data):
 
 @app.cell
 def _(chart):
-    chart.facet_data.nrows
+    type(chart)
     return
 
 
