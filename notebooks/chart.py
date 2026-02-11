@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.19.7"
-app = marimo.App(width="full")
+app = marimo.App(width="medium")
 
 with app.setup:
     import matplotlib.pyplot as plt
