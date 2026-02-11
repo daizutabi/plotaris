@@ -101,6 +101,5 @@ reportUnknownMemberType = false
 reportUnknownParameterType = false
 reportUnusedExpression = false
 
-
 [tool.ty.src]
 include = ["src", "tests"]
