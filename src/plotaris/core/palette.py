@@ -33,14 +33,9 @@ class Base:
         self._default = {k: list(v) for k, v in default.items() if v is not None}
         return self
 
-    def mapping(
-        self,
-        /,
-        **mapping: Mapping[Any | tuple[Any, ...], VisualValue],
-    ) -> Self:
+    def mapping(self, **mapping: Mapping[Any, VisualValue]) -> Self:
         def to_tuple_dict(
-            x: Mapping[Any | tuple[Any, ...], VisualValue],
-            /,
+            x: Mapping[Any, VisualValue],
         ) -> dict[tuple[Any, ...], VisualValue]:
             return {k if isinstance(k, tuple) else (k,): v for k, v in x.items()}
 

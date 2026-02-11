@@ -31,12 +31,10 @@ class Chart:
     color: tuple[str, ...] = ()
     size: tuple[str, ...] = ()
     shape: tuple[str, ...] = ()
-    row: tuple[str, ...] = ()
-    col: tuple[str, ...] = ()
-    wrap: int | None = None
     palette: Palette | None = None
     mark: Mark | None = None
-    _plot: Callable[..., Any] | None = None
+    plot: Callable[..., Any] | None = None
+    axes: Axes | None = None
     _kwargs: dict[str, Any]
 
     def __init__(
@@ -56,21 +54,14 @@ class Chart:
         names = ["color", "size", "shape"]
         return {name: value for name in names if (value := getattr(self, name))}
 
-    @property
-    def has_facet(self) -> bool:
-        return bool(self.row or self.col)
-
     def encode(
         self,
         x: str | pl.Expr | None = None,
         y: str | pl.Expr | None = None,
         *,
         color: str | Iterable[str] | None = None,
-        size: str | Iterable[str] | None = None,
         shape: str | Iterable[str] | None = None,
-        row: str | Iterable[str] | None = None,
-        col: str | Iterable[str] | None = None,
-        wrap: int | None = None,
+        size: str | Iterable[str] | None = None,
     ) -> Self:
         if x is not None:
             self.x = x
@@ -78,41 +69,28 @@ class Chart:
             self.y = y
         if color is not None:
             self.color = to_tuple(color)
-        if size is not None:
-            self.size = to_tuple(size)
         if shape is not None:
             self.shape = to_tuple(shape)
-
-        if row or col:
-            self.facet(row, col, wrap)
+        if size is not None:
+            self.size = to_tuple(size)
 
         self.palette = Palette(**self.encoding).set(self.data)
-
         return self
 
     def mapping(
         self,
-        /,
-        **mapping: Mapping[Any | tuple[Any, ...], VisualValue],
+        color: Mapping[Any, VisualValue] | None = None,
+        shape: Mapping[Any, VisualValue] | None = None,
+        size: Mapping[Any, VisualValue] | None = None,
     ) -> Self:
+        it = [("color", color), ("shape", shape), ("size", size)]
+        mapping = {k: v for k, v in it if v}
         if self.palette is not None:
             self.palette.mapping(**mapping).set(self.data)
         return self
 
-    def facet(
-        self,
-        row: str | Iterable[str] | None = None,
-        col: str | Iterable[str] | None = None,
-        wrap: int | None = None,
-    ) -> Self:
-        self.row = to_tuple(row)
-        self.col = to_tuple(col)
-        self.wrap = wrap
-
-        return self
-
     def map(self, plot: Callable[..., Any], /) -> Self:
-        self._plot = plot
+        self.plot = plot
         return self
 
     def mark_point(self, **kwargs: Any) -> Self:
@@ -127,9 +105,7 @@ class Chart:
         self.mark = BarMark(**kwargs)
         return self
 
-    def _get_series(self, data: pl.DataFrame) -> dict[str, Any]:
-        kwargs: dict[str, Any] = {}
-
+    def _get_series(self, data: pl.DataFrame, **kwargs: Any) -> dict[str, Any]:
         if self.palette is not None:
             kwargs.update(self.palette.get(data))
 
@@ -143,27 +119,35 @@ class Chart:
 
     def _iter_series(self, data: pl.DataFrame) -> Iterator[dict[str, Any]]:
         group = Group(data, **self.encoding)
-        return map(self._get_series, group)
+        for df, label in zip(group, group.labels(merge=True), strict=True):
+            yield self._get_series(df, label=label)
 
     def _plot_series(self, data: pl.DataFrame) -> None:
         for series in self._iter_series(data):
-            if self._plot:
-                self._plot(**series)
+            if self.plot:
+                self.plot(**series)
             if self.mark:
                 self.mark.plot(**series)
 
-    def to_facet(self) -> FacetGrid:
-        grid = FacetGrid(self.data, self.row, self.col, self.wrap, **self._kwargs)
+    def facet(
+        self,
+        row: str | Iterable[str] | None = None,
+        col: str | Iterable[str] | None = None,
+        wrap: int | None = None,
+    ) -> FacetGrid:
+        grid = FacetGrid(self.data, row, col, wrap, **self._kwargs)
         grid.map_dataframe(self._plot_series)
         return grid
 
-    def display(self) -> Axes | FacetGrid:
-        if self.has_facet:
-            return self.to_facet()
+    def display(self) -> Axes:
+        if self.axes is None:
+            self.axes = plt.figure(**self._kwargs).add_subplot()  # pyright: ignore[reportUnknownMemberType]
+            self._plot_series(self.data)
+        return self.axes
 
-        ax = plt.figure(**self._kwargs).add_subplot()  # pyright: ignore[reportUnknownMemberType]
-        self._plot_series(self.data)
-        return ax
+    def legend(self, *args: Any, **kwargs: Any) -> Self:
+        self.display().legend(*args, **kwargs)  # pyright: ignore[reportUnknownMemberType]
+        return self
 
-    def _display_(self) -> Axes | FacetGrid:
+    def _display_(self) -> Axes:
         return self.display()
