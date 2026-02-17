@@ -79,7 +79,7 @@ def test_set_axes_log(ax: Axes) -> None:
 
 
 @pytest.mark.parametrize(
-    "x, y, lim, expected_ha, expected_va",
+    ("x", "y", "lim", "expected_ha", "expected_va"),
     [
         (0.1, 0.5, 0.2, "left", "center"),
         (0.9, 0.5, 0.2, "right", "center"),
