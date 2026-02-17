@@ -18,7 +18,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 keywords = []
-dependencies = ["matplotlib>=3.10", "polars>=1.0.0"]
+dependencies = ["matplotlib>=3", "polars>=1"]
 
 [project.urls]
 Documentation = "https://github.com/daizutabi/plotaris"
@@ -27,9 +27,9 @@ Issues = "https://github.com/daizutabi/plotaris/issues"
 
 [dependency-groups]
 dev = [
-  "basedpyright>=1.36.1",
-  "marimo>=0.19.4",
-  "prek>=0.3.2",
+  "basedpyright>=1.38.0",
+  "marimo>=0.19.11",
+  "prek>=0.3.3",
   "pytest>=9.0.2",
   "pytest-clarity>=1.0.1",
   "pytest-cov>=7.0.0",
@@ -37,8 +37,8 @@ dev = [
   "pytest-randomly>=4.0.1",
   "pytest-sugar>=1.1.1",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.14.10",
-  "ty>=0.0.16",
+  "ruff>=0.15.1",
+  "ty>=0.0.17",
   "watchdog>=6.0.0",
 ]
 
