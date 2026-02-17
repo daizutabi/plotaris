@@ -29,7 +29,9 @@ def _():
 @app.cell
 def _(data):
     FacetGrid(data, row="a", col="b", figsize=(4, 2)).set_titles(
-        {"b": "{:.1f}"}, a="A(m)", margin_titles=True
+        {"b": "{:.1f}"},
+        a="A(m)",
+        margin_titles=True,
     )
     return
 
@@ -37,7 +39,10 @@ def _(data):
 @app.cell
 def _(data):
     FacetGrid(
-        data.with_columns(pl.col("a") * 1e-6), col="a", wrap=2, figsize=(4, 2)
+        data.with_columns(pl.col("a") * 1e-6),
+        col="a",
+        wrap=2,
+        figsize=(4, 2),
     ).set_titles(a="A(m)")
     return
 

@@ -55,7 +55,7 @@ skip_covered = true
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-include = ["src/**/*.py", "tests/**/*.py"]
+include = ["notebooks/**/*.py", "src/**/*.py", "tests/**/*.py"]
 
 [tool.ruff.lint]
 preview = true
@@ -99,7 +99,7 @@ required-imports = ["from __future__ import annotations"]
 preview = true
 
 [tool.basedpyright]
-include = ["src", "tests"]
+include = ["notebooks", "src", "tests"]
 reportAny = false
 reportExplicitAny = false
 reportUnusedCallResult = false
@@ -113,4 +113,4 @@ reportUnknownParameterType = false
 reportUnusedExpression = false
 
 [tool.ty.src]
-include = ["src", "tests"]
+include = ["notebooks", "src", "tests"]
