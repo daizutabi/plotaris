@@ -46,7 +46,7 @@ def _format(value: Any, fmt: Format | None, sep: str = "") -> str | tuple[str, s
     if fmt is None:
         return str(value)
     if callable(fmt):
-        return fmt(value)
+        return fmt(value)  # ty: ignore[call-top-callable]
     if "{" in fmt and "}" in fmt:
         return fmt.format(value)
 
