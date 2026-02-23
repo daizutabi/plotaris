@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "plotaris"
-version = "0.2.1"
+version = "0.2.2"
 description = "A plotting library for Python, built on Matplotlib and integrated with Polars for efficient data visualization."
 readme = "README.md"
 license = { file = "LICENSE" }
