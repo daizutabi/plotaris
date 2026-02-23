@@ -36,8 +36,7 @@ def _format(value: Any, fmt: Format | None, sep: str = "") -> str | tuple[str, s
     Args:
         value: The value to format.
         fmt: The format specifier.
-        sep: The separator to use between the number and the unit for
-            EngFormatter.
+        sep: The separator to use between the number and the unit for EngFormatter.
 
     Returns:
         A formatted string, or a tuple of (label, formatted_value) if the
@@ -60,17 +59,16 @@ class Label:
 
     This class takes a dictionary of data and provides methods to format it into
     a string, with customizable separators and advanced formatting rules per key.
-
-    Attributes:
-        data: A dictionary of key-value pairs to be formatted.
-        eq: The string to use as an equals sign between keys and values.
-        sep: The string to use to separate key-value pairs.
     """
 
     data: dict[str, Any] = field(default_factory=dict)
+    """A dictionary of key-value pairs to be formatted."""
     eq: str = "="
+    """The string to use as an equals sign between keys and values."""
     sep: str = ", "
+    """The string to use to separate key-value pairs."""
     unit_sep: str = ""
+    """The separator to use between the number and the unit for EngFormatter."""
     _fmt: dict[str, Format | tuple[str, Format]] = field(default_factory=dict)
 
     def set(self, data: dict[str, Any]) -> Self:
