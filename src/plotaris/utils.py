@@ -26,7 +26,7 @@ def to_tuple(values: str | Iterable[str] | None, /) -> tuple[str, ...]:
 
 
 def get_unit_seperator(label: str) -> Literal["(", "["] | None:
-    """Finds the opening separator of a unit string at the end of a label.
+    """Find the opening separator of a unit string at the end of a label.
 
     A unit string is assumed to be enclosed in parentheses or square brackets
     at the very end of the label string.
@@ -46,7 +46,7 @@ def get_unit_seperator(label: str) -> Literal["(", "["] | None:
 
 
 def split_precision(label: str, sep: str | None = None) -> tuple[str, int | None]:
-    """Splits a precision specifier from a label string.
+    """Split a precision specifier from a label string.
 
     The precision is expected to be in the format ":<digits>" within the unit
     part of the label, e.g., "Current [A:2]".
