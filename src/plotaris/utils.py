@@ -37,6 +37,14 @@ def get_unit_seperator(label: str) -> Literal["(", "["] | None:
     Returns:
         The opening bracket character ("(" or "[") if a valid unit suffix is
         found, otherwise None.
+
+    Examples:
+        >>> get_unit_seperator("Voltage (V)")
+        '('
+        >>> get_unit_seperator("Current [A]")
+        '['
+        >>> get_unit_seperator("Resistance Ω") is None
+        True
     """
     if "[" in label and label.endswith("]"):
         return "["
@@ -60,6 +68,10 @@ def split_precision(label: str, sep: str | None = None) -> tuple[str, int | None
         A tuple containing:
             - The label string with the precision part removed (e.g., "Current [A]").
             - The integer value of the precision, or None if not found.
+
+    Examples:
+        >>> split_precision("Voltage (V:2)")
+        ('Voltage (V)', 2)
     """
     sep = sep or get_unit_seperator(label)
 
@@ -91,6 +103,10 @@ def split_unit_precision(label: str) -> tuple[str, str, int | None]:
             - The main label text.
             - The unit string (e.g., "V", "m/s").
             - The integer precision, or None.
+
+    Examples:
+        >>> split_unit_precision("Voltage (V:2)")
+        ('Voltage', 'V', 2)
     """
     sep = get_unit_seperator(label)
 
