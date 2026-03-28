@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.9"
+__generated_with = "0.21.1"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -30,7 +30,7 @@ def _():
 def _(data):
     FacetGrid(data, row="a", col="b", figsize=(4, 2)).set_titles(
         {"b": "{:.1f}"},
-        a="A(m)",
+        a="-(m)",
         margin_titles=True,
     )
     return
@@ -44,6 +44,11 @@ def _(data):
         wrap=2,
         figsize=(4, 2),
     ).set_titles(a="A(m)")
+    return
+
+
+@app.cell
+def _():
     return
 
 

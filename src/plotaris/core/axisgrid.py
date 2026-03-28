@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+from functools import partial
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, Self
 
 import matplotlib.pyplot as plt
 
+from .axes import format_axes
 from .facet import Facet, FacetCollection, FacetData
 
 if TYPE_CHECKING:
@@ -461,6 +463,28 @@ class FacetGrid:
     def legend(self, *args: Any, **kwargs: Any) -> Self:
         facet_axes = self.facet_axes.filter(has_data=True)
         facet_axes.map_axes(lambda ax: ax.legend(*args, **kwargs))  # pyright: ignore[reportUnknownMemberType]
+        return self
+
+    def format_axes(
+        self,
+        xlabel: str | None = None,
+        ylabel: str | None = None,
+        fontdict: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        for x, y, is_ in [
+            (xlabel, None, "is_bottommost"),
+            (None, ylabel, "is_leftmost"),
+        ]:
+            fmt = partial(
+                format_axes,
+                xlabel=x,
+                ylabel=y,
+                fontdict=fontdict,
+                **kwargs,
+            )
+            self.facet_axes.filter(None, **{is_: True}).map_axes(fmt)
+
         return self
 
     def _display_(self) -> Figure:

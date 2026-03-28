@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.9"
+__generated_with = "0.21.1"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -14,7 +14,11 @@ with app.setup:
 
 @app.cell
 def _():
-    data = pl.DataFrame({"a": [1, 1, 2, 2], "x": [1, 2, 3, 4], "y": [5, 6, 7, 8]})
+    data = pl.DataFrame({
+        "a": [1, 1, 2, 2],
+        "x": [1e-4, 2e-4, 3e-4, 4e-4],
+        "y": [5, 6, 7, 8],
+    })
     return (data,)
 
 
@@ -35,18 +39,18 @@ def _(data):
         # .map(func)
         .mark_point(s=5)
         .label(eq="")
-        # .facet("a", "x")
+        .facet("a", "x")
         # .select(row=0, col=0)
         .legend(fontsize=6)
+        .format_axes(xlabel="X (mm)", ylabel="Y (km)")
         # .set_titles()
     )
     chart
-    return (chart,)
+    return
 
 
 @app.cell
-def _(chart):
-    chart.encoding
+def _():
     return
 
 

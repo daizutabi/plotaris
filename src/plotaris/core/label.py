@@ -125,7 +125,7 @@ class Label:
             formatted = _format(value, fmt, self.unit_sep)  # ty: ignore[invalid-argument-type]
 
             k, v = formatted if isinstance(formatted, tuple) else (key_, formatted)
-            parts.append(f"{k or key_}{self.eq}{v}" if self.eq else str(v))
+            parts.append(f"{k or key_}{self.eq}{v}" if self.eq and k != "-" else v)
 
         return self.sep.join(parts)
 

@@ -9,6 +9,7 @@ from plotaris.marks.line import LineMark
 from plotaris.marks.point import PointMark
 from plotaris.utils import to_tuple
 
+from .axes import format_axes
 from .axisgrid import FacetGrid
 from .group import Group
 from .label import Label
@@ -164,6 +165,22 @@ class Chart:
 
     def legend(self, *args: Any, **kwargs: Any) -> Self:
         self.display().legend(*args, **kwargs)  # pyright: ignore[reportUnknownMemberType]
+        return self
+
+    def format_axes(
+        self,
+        xlabel: str | None = None,
+        ylabel: str | None = None,
+        fontdict: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        ax = self.display()
+        format_axes(ax, xlabel, ylabel, fontdict, **kwargs)
+        return self
+
+    def set(self, **kwargs: Any) -> Self:
+        ax = self.display()
+        ax.set(**kwargs)
         return self
 
     def _display_(self) -> Axes:
