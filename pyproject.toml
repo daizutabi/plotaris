@@ -1,11 +1,11 @@
 [build-system]
-requires = ["uv_build"]
+requires = ["uv_build<0.12"]
 build-backend = "uv_build"
 
 [project]
 name = "plotaris"
 version = "0.3.0"
-description = "A plotting library for Python, built on Matplotlib and integrated with Polars for efficient data visualization."
+description = "A utility library for Altair."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "daizutabi", email = "daizutabi@gmail.com" }]
@@ -18,14 +18,14 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 keywords = [
-  "plotting",
-  "visualization",
-  "matplotlib",
-  "polars",
+  "altair",
   "data science",
+  "plotting",
+  "polars",
   "python",
+  "visualization",
 ]
-dependencies = ["matplotlib>=3", "polars>=1"]
+dependencies = ["altair>=6"]
 
 [project.urls]
 Documentation = "https://github.com/daizutabi/plotaris"
@@ -36,16 +36,16 @@ Issues = "https://github.com/daizutabi/plotaris/issues"
 dev = [
   "basedpyright>=1.38.1",
   "marimo>=0.20.2",
+  "polars>=1",
   "prek>=0.3.3",
-  "pytest>=9.0.2",
   "pytest-clarity>=1.0.1",
   "pytest-cov>=7.0.0",
-  "pytest-mock>=3.15.1",
   "pytest-randomly>=4.0.1",
-  "pytest-sugar>=1.1.1",
   "pytest-xdist>=3.8.0",
+  "pytest>=9.0.2",
   "ruff>=0.15.2",
   "ty>=0.0.18",
+  "vl-convert-python>=1.9.0.post1",
   "watchdog>=6.0.0",
 ]
 
@@ -77,9 +77,10 @@ ignore = [
   "D",
   "DOC201",
   "DOC402",
-  "PLR0913",
-  "PLR0917",
+  "N",
+  "PLR",
   "PLW3201",
+  "RET504",
   "RUF001",
 ]
 

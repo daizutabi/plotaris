@@ -1,9 +1,0 @@
-figure.figsize: 3, 2
-figure.dpi: 160
-figure.constrained_layout.use: true
-
-axes.labelsize: 9.5
-axes.titlesize: 9.5
-
-xtick.labelsize: 8.5
-ytick.labelsize: 8.5
