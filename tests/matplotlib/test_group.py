@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal as _assert_frame_equal
 
-from plotaris.matplotlib.group import Group, group_by, with_index
+from plotaris.matplotlib.group import Group, group_by, to_tuple, with_index
 
 
 def assert_frame_equal(left: pl.DataFrame, right: pl.DataFrame, /) -> None:
@@ -69,6 +69,14 @@ def test_with_index(columns: list[str], values: list[int | None]) -> None:
     result = with_index(data, columns, "x")
     expected = data.with_columns(x=pl.Series(values))
     assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [(None, ()), ("abc", ("abc",)), (["abc"], ("abc",))],
+)
+def test_to_tuple(values: str | list[str] | None, expected: tuple[str, ...]) -> None:
+    assert to_tuple(values) == expected
 
 
 def test_group_empty() -> None:

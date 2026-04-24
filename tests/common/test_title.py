@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from plotaris.title import get_unit_seperator, split_precision, split_unit_precision
+from plotaris.common.title import (
+    get_unit_seperator,
+    split_precision,
+    split_unit_precision,
+)
 
 
 @pytest.mark.parametrize(

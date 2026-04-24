@@ -8,6 +8,7 @@ class Title:
     label: str
     unit: str
     power: int | None
+    fmt: str | None
     precision: int | None
 
     def __init__(self, text: str) -> None:
