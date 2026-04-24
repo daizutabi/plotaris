@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from matplotlib.axis import XAxis
 from matplotlib.ticker import EngFormatter, FuncFormatter
 
-from plotaris.utils import get_unit_seperator, split_precision
+from plotaris.common.title import get_unit_seperator, split_format
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes

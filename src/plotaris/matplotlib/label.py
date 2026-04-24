@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Self, override
 
 from matplotlib.ticker import EngFormatter
 
-from plotaris.utils import split_unit_precision
+from plotaris.common.title import split_unit_format
 
 if TYPE_CHECKING:
     from collections.abc import Callable
