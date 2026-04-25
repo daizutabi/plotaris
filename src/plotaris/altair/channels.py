@@ -4,7 +4,7 @@ from typing import cast
 
 import altair as alt
 
-from .title import Title
+from plotaris.common.title import Title
 
 
 def get_title(text: str | Title | None, /) -> Title | None:
@@ -24,8 +24,10 @@ def get_label_expr(title: Title, fmt: str | None = None) -> str | None:
 
     if title.power:
         labelExpr = f"{labelExpr}*1e{-title.power}"
-    if title.precision:
-        labelExpr = f"format({labelExpr},'.{title.precision}f')"
+    if isinstance(title.fmt, int):
+        labelExpr = f"format({labelExpr},'.{title.fmt}f')"
+    elif title.fmt:
+        labelExpr = f"format({labelExpr},'{title.fmt}')"
     elif fmt:
         labelExpr = f"format({labelExpr},'{fmt}')"
 
