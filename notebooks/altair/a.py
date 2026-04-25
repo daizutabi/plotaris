@@ -7,9 +7,11 @@ with app.setup:
     import altair as alt
     import polars as pl
 
-    import plotaris as pts
+    import plotaris as pt
+    from plotaris.altair.theme import set_theme
 
     alt.renderers.enable("png", ppi=200)
+    set_theme('"Noto Sans CJK JP", Meiryo')
 
 
 @app.cell
@@ -26,13 +28,30 @@ def _():
 @app.cell
 def _(data):
     alt.Chart(data).mark_point().encode(
-        x=pts.X("x", "X label (mm)").scale(domain=[0, 4e-3]),
-        y=pts.Y("y", "Y label (km)"),
-        color=pts.Color("c:N", "Color (m)"),
-        shape=pts.Shape("s:N", "Shape (Hz)"),
-        row=pts.Row("s:N", "Row (s)"),
-        column=pts.Column("c:N", "Column (s)"),
+        x=pt.X("x", "Xラベル (mm)").scale(domain=[0, 4e-3]),
+        y=pt.Y("y", "Yラベル (km)"),
+        color=pt.Color("c:N", "Color (m)"),
+        shape=pt.Shape("s:N", "Shape (Hz)"),
+        row=pt.Row("s:N", "Row (s)"),
+        column=pt.Column("c:N", "Column (s)"),
     ).properties(width=80, height=80)
+    return
+
+
+@app.cell
+def _():
+    data2 = pl.DataFrame({
+        "x": [1e-9, 1e-6, 1e-3],
+        "y": [1e3, 1e6, 1e9],
+    })
+    return (data2,)
+
+
+@app.cell
+def _(data2):
+    alt.Chart(data2).mark_point().encode(
+        x=pt.Xlog("x", "Xラベル", domain=(1e-12, 1e3)), y=pt.Ylog("y")
+    ).properties(width=200, height=200)
     return
 
 

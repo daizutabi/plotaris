@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal, cast
 
 import altair as alt
+from altair.utils.schemapi import Undefined, UndefinedType
 
 from plotaris.common.title import Title
 
@@ -77,6 +78,32 @@ def X(shorthand: str, title: str | None = None, **kwargs: Any) -> alt.X:
 
 def Y(shorthand: str, title: str | None = None, **kwargs: Any) -> alt.Y:
     return _get(alt.Y, "axis", shorthand, title, **kwargs)
+
+
+def Xlog(
+    shorthand: str,
+    title: str | None = None,
+    domain: tuple[float, float] | UndefinedType = Undefined,
+    **kwargs: Any,
+) -> alt.X:
+    x = alt.X(shorthand).axis(format="~s", **kwargs).scale(type="log", domain=domain)
+    if title:
+        x = x.title(title)
+
+    return x
+
+
+def Ylog(
+    shorthand: str,
+    title: str | None = None,
+    domain: tuple[float, float] | UndefinedType = Undefined,
+    **kwargs: Any,
+) -> alt.Y:
+    x = alt.Y(shorthand).axis(format="~s", **kwargs).scale(type="log", domain=domain)
+    if title:
+        x = x.title(title)
+
+    return x
 
 
 def Color(shorthand: str, title: str | None = None, **kwargs: Any) -> alt.Color:

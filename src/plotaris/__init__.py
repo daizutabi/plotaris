@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .altair.channels import Color, Column, Row, Shape, X, Y
+from .altair.channels import Color, Column, Row, Shape, X, Xlog, Y, Ylog
 from .matplotlib.axes import (
     axes_text,
     format_axes,
@@ -17,7 +17,9 @@ __all__ = [
     "Row",
     "Shape",
     "X",
+    "Xlog",
     "Y",
+    "Ylog",
     "axes_text",
     "format_axes",
     "format_axis",
