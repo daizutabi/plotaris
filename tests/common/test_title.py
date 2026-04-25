@@ -69,6 +69,7 @@ def test_split_unit_format(
         ("km", 3),
         ("mg", -3),
         ("µs", -6),
+        ("μs", -6),
         ("ns", -9),
         ("pA", -12),
         ("fF", -15),

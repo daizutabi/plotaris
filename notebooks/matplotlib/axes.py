@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.23.3"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -20,7 +20,7 @@ with app.setup:
 def _():
     _ax = plt.figure(figsize=(3, 2)).add_subplot()
     _ax.set(xlim=(-1e-5, 1e-5))
-    format_axis(_ax.xaxis, "Voltage (μV)")
+    format_axis(_ax.xaxis, "Voltage (µV)")
     _ax
     return
 
@@ -29,7 +29,7 @@ def _():
 def _():
     _ax = plt.figure(figsize=(3, 2)).add_subplot()
     _ax.set(xlim=(-1e-4, 1e-4), ylim=(-1e-7, 1e-7))
-    format_axes(_ax, "Voltage (mV:2)", "Current (nA)")
+    format_axes(_ax, "Voltage (mV):2", "Current (nA)")
     return
 
 
@@ -42,6 +42,11 @@ def _():
     axes_text(_ax, 0.98, 0.02, "abcdef")
     axes_text(_ax, 0.98, 0.98, "abcdef")
     _ax
+    return
+
+
+@app.cell
+def _():
     return
 
 
