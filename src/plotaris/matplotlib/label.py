@@ -49,8 +49,10 @@ def _format(value: Any, fmt: Format | None, sep: str = "") -> str | tuple[str, s
     if "{" in fmt and "}" in fmt:
         return fmt.format(value)
 
-    label, unit, precision = split_unit_precision(fmt)
-    return label, EngFormatter(unit, precision, sep)(value)
+    label, unit, fmt_ = split_unit_format(fmt)
+    if isinstance(fmt_, int | None):
+        return label, EngFormatter(unit, fmt_, sep)(value)
+    return label, f"{value:{fmt_}}{sep}{unit}"
 
 
 @dataclass
