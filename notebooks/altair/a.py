@@ -1,11 +1,12 @@
 import marimo
 
-__generated_with = "0.23.1"
+__generated_with = "0.23.3"
 app = marimo.App(width="medium")
 
 with app.setup:
     import altair as alt
     import polars as pl
+
     import plotaris as pts
 
     alt.renderers.enable("png", ppi=200)
@@ -29,19 +30,9 @@ def _(data):
         y=pts.Y("y", "Y label (km)"),
         color=pts.Color("c:N", "Color (m)"),
         shape=pts.Shape("s:N", "Shape (Hz)"),
-    ).properties(width=200, height=200)
-    return
-
-
-@app.cell
-def _():
-    c = pts.Color("c:N", "Color (m)")
-    return (c,)
-
-
-@app.cell
-def _(c):
-    c.to_dict()
+        row=pts.Row("s:N", "Row (s)"),
+        column=pts.Column("c:N", "Column (s)"),
+    ).properties(width=80, height=80)
     return
 
 
