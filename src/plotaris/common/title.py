@@ -134,9 +134,7 @@ def get_power(unit: str) -> int:
             return 3 * m
         case "m":
             return -3 * m
-        case "\u00b5":
-            return -6 * m
-        case "\u03bc":
+        case "\u00b5" | "\u03bc":
             return -6 * m
         case "n":
             return -9 * m
