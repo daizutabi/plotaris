@@ -7,7 +7,7 @@ class Title:
     text: str
     label: str
     unit: str
-    power: int | None
+    power: int
     fmt: str | int | None
 
     def __init__(self, text: str) -> None:

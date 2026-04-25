@@ -5,25 +5,12 @@ from typing import TYPE_CHECKING, Any
 from matplotlib.axis import XAxis
 from matplotlib.ticker import EngFormatter, FuncFormatter
 
-from plotaris.common.title import get_unit_seperator, split_format
+from plotaris.common.title import Title
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.axis import YAxis
     from matplotlib.text import Text
-
-
-def _get_power(unit: str) -> int:
-    if len(unit) == 1:
-        return 0
-
-    prefix = unit[0].replace("μ", EngFormatter.ENG_PREFIXES[-6])
-
-    for power, value in EngFormatter.ENG_PREFIXES.items():
-        if prefix == value:
-            return power
-
-    return 0
 
 
 def format_axis(
@@ -33,18 +20,17 @@ def format_axis(
     fontdict: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Text:
-    sep = get_unit_seperator(label)
-    label, precision = split_precision(label, sep)
-    fmt = "g" if precision is None else f".{precision}f"
-
-    text = axis.set_label_text(label, fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
-
-    if sep:
-        _, unit = label[:-1].rsplit(sep, 1)
-        scale = 10 ** _get_power(unit)
+    title = Title(label)
+    if title.fmt is None:
+        fmt = "g"
+    elif isinstance(title.fmt, int):
+        fmt = f".{title.fmt}f"
     else:
-        scale = 1
+        fmt = title.fmt
 
+    text = axis.set_label_text(str(title), fontdict, **kwargs)  # pyright: ignore[reportUnknownMemberType]
+
+    scale = 10**title.power
     func = FuncFormatter(lambda x, _: f"{x / scale:{fmt}}")  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
     axis.set_major_formatter(func)
 

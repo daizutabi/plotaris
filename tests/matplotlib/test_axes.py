@@ -53,7 +53,7 @@ def test_format_axis_with_prefix(ax: Axes) -> None:
 
 def test_format_axis_with_place(ax: Axes) -> None:
     ax.set(xlim=(0, 3000))
-    text = format_axis(ax.xaxis, "Voltage [kV:1]")
+    text = format_axis(ax.xaxis, "Voltage [kV]:1")
     assert text.get_text() == "Voltage [kV]"
     ticks = [x.get_text() for x in ax.xaxis.get_majorticklabels()]
     assert ticks == ["0.0", "0.5", "1.0", "1.5", "2.0", "2.5", "3.0"]
@@ -61,7 +61,7 @@ def test_format_axis_with_place(ax: Axes) -> None:
 
 def test_format_axes(ax: Axes) -> None:
     ax.set(xlim=(-1e-4, 1e-4), ylim=(-1e-7, 1e-7))
-    format_axes(ax, "Voltage (mV:2)", "Current (nA)")
+    format_axes(ax, "Voltage (mV):.2f", "Current (nA)")
     assert ax.xaxis.get_label().get_text() == "Voltage (mV)"
     ticks = [x.get_text() for x in ax.xaxis.get_majorticklabels()]
     assert ticks == ["-0.10", "-0.05", "0.00", "0.05", "0.10"]
