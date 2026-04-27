@@ -72,12 +72,22 @@ def _get[T: alt.X | alt.Y | alt.Color | alt.Shape | alt.Column | alt.Row](
     return x
 
 
-def X(shorthand: str, title: str | None = None, **kwargs: Any) -> alt.X:
-    return _get(alt.X, "axis", shorthand, title, **kwargs)
+def X(
+    shorthand: str,
+    title: str | None = None,
+    domain: tuple[float, float] | UndefinedType = Undefined,
+    **kwargs: Any,
+) -> alt.X:
+    return _get(alt.X, "axis", shorthand, title, **kwargs).scale(domain=domain)
 
 
-def Y(shorthand: str, title: str | None = None, **kwargs: Any) -> alt.Y:
-    return _get(alt.Y, "axis", shorthand, title, **kwargs)
+def Y(
+    shorthand: str,
+    title: str | None = None,
+    domain: tuple[float, float] | UndefinedType = Undefined,
+    **kwargs: Any,
+) -> alt.Y:
+    return _get(alt.Y, "axis", shorthand, title, **kwargs).scale(domain=domain)
 
 
 def Xlog(

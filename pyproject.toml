@@ -47,6 +47,7 @@ dev = [
   "pytest-randomly>=4.0.1",
   "pytest-xdist>=3.8.0",
   "pytest>=9.0.2",
+  "python-lsp-server>=1.14.0",
   "ruff>=0.15.2",
   "ty>=0.0.18",
   "vl-convert-python>=1.9.0.post1",

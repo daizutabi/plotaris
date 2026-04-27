@@ -28,8 +28,8 @@ def _():
 @app.cell
 def _(data):
     alt.Chart(data).mark_point().encode(
-        x=pt.X("x", "Xラベル (mm)").scale(domain=[0, 4e-3]),
-        y=pt.Y("y", "Yラベル (km)"),
+        x=pt.X("x", "Xラベル (mm)", domain=(0, 4e-3)),
+        y=pt.Y("y", "Yラベル (km)", domain=(0, 4e3)),
         color=pt.Color("c:N", "Color (m)"),
         shape=pt.Shape("s:N", "Shape (Hz)"),
         row=pt.Row("s:N", "Row (s)"),
@@ -50,13 +50,9 @@ def _():
 @app.cell
 def _(data2):
     alt.Chart(data2).mark_point().encode(
-        x=pt.Xlog("x", "Xラベル", domain=(1e-12, 1e3)), y=pt.Ylog("y")
+        x=pt.Xlog("x", "Xラベル", domain=(1e-10, 1e-2)),
+        y=pt.Ylog("y", "Yラベル", domain=(1e2, 1e10)),
     ).properties(width=200, height=200)
-    return
-
-
-@app.cell
-def _():
     return
 
 

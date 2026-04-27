@@ -10,7 +10,7 @@ def set_theme(font: str) -> None:
             "config": {
                 "font": font,
                 "axis": {"labelFlush": False},
-                "headerColumn": {"titlePadding": 0, "labelPadding": 0},
+                "headerColumn": {"titlePadding": 0, "labelPadding": 4},
                 "headerRow": {"titlePadding": 0, "labelPadding": 8},
             },
         }
