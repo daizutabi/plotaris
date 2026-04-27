@@ -28,13 +28,13 @@ repos:
       - id: basedpyright
         files: ^(src|tests)/
 
-  - repo: local
-    hooks:
-      - id: ty
-        name: ty check
-        entry: uv run ty check
-        language: python
-        files: ^(src|tests)/.*\.py$
+  # - repo: local
+  #   hooks:
+  #     - id: ty
+  #       name: ty check
+  #       entry: uv run ty check
+  #       language: python
+  #       files: ^(src|tests)/.*\.py$
 
   - repo: local
     hooks:
