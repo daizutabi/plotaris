@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.3"
+__generated_with = "0.23.4"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -10,7 +10,7 @@ with app.setup:
     import plotaris as pt
     from plotaris.altair.theme import set_theme
 
-    alt.renderers.enable("png", ppi=200)
+    alt.renderers.enable("svg", ppi=200)
     set_theme('"Noto Sans CJK JP", Meiryo')
 
 
@@ -53,6 +53,17 @@ def _(data2):
         x=pt.Xlog("x", "Xラベル", domain=(1e-10, 1e-2)),
         y=pt.Ylog("y", "Yラベル", domain=(1e2, 1e10)),
     ).properties(width=200, height=200)
+    return
+
+
+@app.cell
+def _():
+    alt.Chart().mark_rule().encode(x=alt.datum(1))._repr_mimebundle_()
+    return
+
+
+@app.cell
+def _():
     return
 
 

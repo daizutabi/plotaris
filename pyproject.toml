@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "plotaris"
 version = "0.5.0"
-description = "A utility library for Altair."
+description = ""
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "daizutabi", email = "daizutabi@gmail.com" }]

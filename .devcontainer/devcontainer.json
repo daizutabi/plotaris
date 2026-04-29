@@ -1,7 +1,7 @@
 {
   "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu24.04",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers-extra/features/starship:1": {}
   },
   "customizations": {
@@ -9,6 +9,7 @@
       "extensions": [
         "charliermarsh.ruff",
         "detachhead.basedpyright",
+        "esbenp.prettier-vscode",
         "fill-labs.dependi",
         "markis.code-coverage",
         "ms-python.python",
